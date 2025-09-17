@@ -80,7 +80,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           getTtlMsFromSettings(resolve)
         );
         const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
-        function computeInactiveFlag(updatedAt) {
+        // computeInactiveFlag: returns true if `updatedAt` is more than ~30 days ago.
+        const computeInactiveFlag = (updatedAt) => {
           try {
             if (!updatedAt) return false;
             const ts = Date.parse(updatedAt);
@@ -89,7 +90,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           } catch (e) {
             return false;
           }
-        }
+        };
         const cached = await getCached(chrome.storage.local, owner, repo);
         chrome.storage.sync.get(
           ['gh_token', 'debug_logging'],
@@ -107,17 +108,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               }
 
               // If we have a fresh cached value, perform a quick HEAD check to ensure the repo still exists.
-              const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
-              function computeInactiveFlag(updatedAt) {
-                try {
-                  if (!updatedAt) return false;
-                  const ts = Date.parse(updatedAt);
-                  if (Number.isNaN(ts)) return false;
-                  return Date.now() - ts > ONE_MONTH_MS;
-                } catch (e) {
-                  return false;
-                }
-              }
 
               if (isFresh(cached, ttlMs)) {
                 try {
@@ -136,7 +126,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   // otherwise, return the cached value
                   sendResponse({
                     stars: cached.data.stargazers_count,
-                    updated: cached.ts,
+                    // expose the repository's updated_at (when available) so callers can
+                    // compute staleness from the repository's last push/update time.
+                    updated:
+                      cached.data && cached.data.updated_at
+                        ? cached.data.updated_at
+                        : new Date(cached.ts).toISOString(),
+                    fetched_at: cached.ts,
                     cached: true,
                     archived: !!cached.data.archived,
                     inactive: computeInactiveFlag(cached.data.updated_at)
@@ -146,7 +142,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   // network errors when checking HEAD -> fall back to cached
                   sendResponse({
                     stars: cached.data.stargazers_count,
-                    updated: cached.ts,
+                    updated:
+                      cached.data && cached.data.updated_at
+                        ? cached.data.updated_at
+                        : new Date(cached.ts).toISOString(),
+                    fetched_at: cached.ts,
                     cached: true,
                     archived: !!cached.data.archived,
                     inactive: computeInactiveFlag(cached.data.updated_at)
@@ -161,7 +161,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               await setCached(chrome.storage.local, owner, repo, json);
               sendResponse({
                 stars: json.stargazers_count,
-                updated: Date.now(),
+                // use the repo's updated_at provided by the API
+                updated: json.updated_at || new Date().toISOString(),
+                fetched_at: Date.now(),
                 cached: false,
                 archived: !!json.archived,
                 inactive: computeInactiveFlag(json.updated_at)
@@ -187,7 +189,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               if (cached) {
                 sendResponse({
                   stars: cached.data.stargazers_count,
-                  updated: cached.ts,
+                  updated:
+                    cached.data && cached.data.updated_at
+                      ? cached.data.updated_at
+                      : new Date(cached.ts).toISOString(),
+                  fetched_at: cached.ts,
                   cached: true,
                   stale: true,
                   archived: !!cached.data.archived,

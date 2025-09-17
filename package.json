@@ -20,6 +20,9 @@
     "playwright": "^1.55.0"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ]
   }
 }
