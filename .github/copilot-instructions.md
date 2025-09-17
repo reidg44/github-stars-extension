@@ -82,16 +82,16 @@ Content script → Background worker message flow:
 chrome.runtime.sendMessage({ type: 'GET_STARS', owner, repo }, callback);
 
 // Background worker responds with:
-{ stars: 1234, updated: timestamp, archived: false, stale: false }
+{ stars: 1234, updated: timestamp, archived: false }
 // OR { error: 'message', notFound: true }
 ```
 
 ## Badge State Visual Patterns
 
 - **Active repo**: ⭐ {count} (yellow star + number)
+- **Inactive repo**: 🧟 {count} (zombie emoji + star count for repos not updated in 30+ days)
 - **Archived repo**: 🪦 (gravestone emoji only, no star)
 - **Not found**: 🚫 (banned emoji only, no star)
-- **Stale cache**: Dimmed appearance (`.stale` class)
 
 ## Extension-Specific Conventions
 

@@ -112,7 +112,7 @@ test('fresh cache includes updated and inactive', async () => {
   expect(typeof res.inactive).toBe('boolean');
 });
 
-test('stale fallback includes updated and inactive', async () => {
+test('fallback when API fails includes updated and inactive', async () => {
   const owner = 'a2';
   const repo = 'b2';
   const oldNow = Date.now() - 1000 * 60 * 60 * 24 * 400; // old updated_at
@@ -122,19 +122,18 @@ test('stale fallback includes updated and inactive', async () => {
       updated_at: new Date(oldNow).toISOString(),
       archived: false
     },
-    ts: Date.now() - 1000 * 60 * 60 * 24 * 10 // 10 days ago -> stale when TTL=1 min
+    ts: Date.now() - 1000 * 60 * 60 * 24 * 10 // 10 days ago -> cached data when TTL=1 min
   };
   const key = `gh:${owner}/${repo}`;
   fakeStorage.local.set({ [key]: cachedPayload });
   fakeStorage.sync.set({ cache_ttl_minutes: 1 });
 
-  // Make fetch fail to force stale fallback
+  // Make fetch fail to force fallback to cached data
   global.fetch = async () => {
     throw new Error('network');
   };
   loadBackgroundWithMockFetch();
   const res = await sendGetStars(owner, repo);
-  expect(res.stale).toBe(true);
   expect(res.updated).toBe(cachedPayload.data.updated_at);
   expect(typeof res.inactive).toBe('boolean');
 });

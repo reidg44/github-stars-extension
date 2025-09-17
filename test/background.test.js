@@ -111,12 +111,12 @@ test('returns cached when fresh', async () => {
   expect(res.cached).toBe(true);
 });
 
-test('stale cache but API success updates cache', async () => {
+test('old cache but API success updates cache', async () => {
   const owner = 'reidg44';
   const repo = 'github-stars-extension';
   const key = `gh:${owner}/${repo}`;
   const oldTs = Date.now() - 1000 * 60 * 120; // 2 hours ago
-  // set a stale cached entry
+  // set an old cached entry
   fakeStorage.local.set({
     [key]: { data: { stargazers_count: 10 }, ts: oldTs }
   });
@@ -140,7 +140,7 @@ test('stale cache but API success updates cache', async () => {
   expect(cached.data.stargazers_count).toBe(123);
 });
 
-test('stale cache and API failure returns stale with stale flag', async () => {
+test('old cache and API failure returns cached data', async () => {
   const owner = 'reidg44';
   const repo = 'github-stars-extension';
   const key = `gh:${owner}/${repo}`;
@@ -156,7 +156,6 @@ test('stale cache and API failure returns stale with stale flag', async () => {
   loadBackgroundWithMockFetch();
   const res = await sendGetStars(owner, repo);
   expect(res.stars).toBe(7);
-  expect(res.stale).toBe(true);
 });
 
 test('no cache and API failure returns error', async () => {

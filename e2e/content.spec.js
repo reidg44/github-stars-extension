@@ -38,9 +38,9 @@ window.chrome.runtime = window.chrome.runtime || {
       cb && cb({ stars: 100, updated: Date.now() - 1000 * 60 * 60 * 24 * 400, archived: true });
       return;
     }
-    if (repo.includes('stale') || repo.includes('project-based-learning')) {
-      // simulate stale cache: stale true, but no inactive flag (to test content fallback)
-      cb && cb({ stars: 50, updated: Date.now() - 1000 * 60 * 60 * 24 * 200, stale: true });
+    if (repo.includes('project-based-learning')) {
+      // simulate inactive repo: updated more than 30 days ago
+      cb && cb({ stars: 50, updated: Date.now() - 1000 * 60 * 60 * 24 * 40, inactive: true });
       return;
     }
     // default active repo
@@ -49,7 +49,7 @@ window.chrome.runtime = window.chrome.runtime || {
 };
 `;
 
-test('E2E: badges render for active, archived, stale, and missing', async ({
+test('E2E: badges render for active, inactive, archived, and missing', async ({
   page
 }) => {
   const testPage =
@@ -90,9 +90,9 @@ test('E2E: badges render for active, archived, stale, and missing', async ({
   expect(results['repo5']).toBe('1,234'); // trekhleb active
   // archived should show gravestone
   expect(results['repo2']).toBe('🪦');
-  // stale should show zombie emoji via fallback
+  // inactive should show zombie + star count
   // project-based-learning is in repo3
-  expect(results['repo3']).toMatch(/^🧟/);
+  expect(results['repo3']).toBe('🧟 50');
   // missing repo should show banned emoji
   expect(results['repo6']).toBe('🚫');
 });

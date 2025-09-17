@@ -127,7 +127,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   sendResponse({
                     stars: cached.data.stargazers_count,
                     // expose the repository's updated_at (when available) so callers can
-                    // compute staleness from the repository's last push/update time.
+                    // compute inactivity from the repository's last push/update time.
                     updated:
                       cached.data && cached.data.updated_at
                         ? cached.data.updated_at
@@ -185,7 +185,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 return;
               }
 
-              // For other errors, if fetch failed but we have stale cached data, return it as fallback
+              // For other errors, if fetch failed but we have cached data, return it as fallback
               if (cached) {
                 sendResponse({
                   stars: cached.data.stargazers_count,
@@ -195,7 +195,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                       : new Date(cached.ts).toISOString(),
                   fetched_at: cached.ts,
                   cached: true,
-                  stale: true,
                   archived: !!cached.data.archived,
                   inactive: computeInactiveFlag(cached.data.updated_at)
                 });

@@ -206,9 +206,6 @@
             }
           } else {
             // compute display for stars; if inactive, prefix with zombie emoji
-            // Background may sometimes only send `stale: true` without `inactive`.
-            // In that case we compute an inactivity flag locally from the `updated` timestamp
-            // so the UI still shows the zombie indicator.
             const inactiveFlag =
               typeof response.inactive === 'boolean'
                 ? response.inactive
@@ -227,7 +224,6 @@
                 response.updated
               ).toLocaleString()}`;
             }
-            if (response.stale) span.classList.add('stale');
           }
         }
       }

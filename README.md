@@ -41,7 +41,7 @@ Make sure you run the build before loading the extension if you've edited backgr
 
 This project includes:
 - Unit/integration tests with Jest (some tests run in a jsdom environment).
-- An end-to-end (E2E) smoke test implemented with Playwright that loads `test/test-page.html`, injects a small `chrome` shim and the extension's `src/content.js`, and verifies the badges for Active / Archived / Stale / Missing cases.
+- An end-to-end (E2E) smoke test implemented with Playwright that loads `test/test-page.html`, injects a small `chrome` shim and the extension's `src/content.js`, and verifies the badges for Active / Inactive / Archived / Missing cases.
 
 Unit tests (Jest)
 
