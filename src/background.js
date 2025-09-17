@@ -109,7 +109,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 stale: true
               });
             } else {
-              sendResponse({ error: err.message });
+              // Mark notFound for 404 responses so the UI can show a different indicator
+              const msg = err && err.message ? String(err.message) : '';
+              if (/404/.test(msg)) {
+                sendResponse({ error: msg, notFound: true });
+              } else {
+                sendResponse({ error: msg });
+              }
             }
           }
         });

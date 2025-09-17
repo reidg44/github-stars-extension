@@ -80,3 +80,27 @@ test('allow links with readable text on github outside UI', () => {
   document.body.appendChild(a);
   expect(helper(a, 'other', 'repo2')).toBe(true);
 });
+
+test('displays notFound indicator when background signals 404', (done) => {
+  window.location = new URL('https://example.com/');
+  // shim runtime.sendMessage to simulate background response
+  global.chrome.runtime.sendMessage = (msg, cb) => {
+    // simulate the background telling us the repo was not found
+    cb({ error: 'Not Found', notFound: true });
+  };
+
+  loadContentScript();
+  const a = document.createElement('a');
+  a.href = 'https://github.com/some/missing-repo';
+  a.textContent = 'missing-repo';
+  document.body.appendChild(a);
+
+  // allow mutation observer / async sendMessage callback to run
+  setTimeout(() => {
+    const badge = document.querySelector('.gh-stars-badge');
+    expect(badge).not.toBeNull();
+    const txt = badge.querySelector('.gh-stars-count');
+    expect(txt.textContent).toBe('🚫');
+    done();
+  }, 10);
+});

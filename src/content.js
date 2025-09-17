@@ -124,7 +124,13 @@
       (response) => {
         if (!response) return;
         if (response.error) {
-          txt.textContent = '-';
+          // If the background marked this repo as not found (404), show a distinct indicator
+          if (response.notFound) {
+            txt.textContent = '🚫';
+            span.title = 'Repository not found';
+          } else {
+            txt.textContent = '-';
+          }
         } else {
           txt.textContent = response.stars.toLocaleString();
           span.title = `Updated: ${new Date(
