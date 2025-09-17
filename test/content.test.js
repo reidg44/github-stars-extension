@@ -104,3 +104,54 @@ test('displays notFound indicator when background signals 404', (done) => {
     done();
   }, 10);
 });
+
+test('displays inactive (zombie) indicator when background signals inactive', (done) => {
+  window.location = new URL('https://example.com/');
+  // shim runtime.sendMessage to simulate background response
+  global.chrome.runtime.sendMessage = (msg, cb) => {
+    // simulate the background telling us the repo is inactive
+    cb({ stars: 1234, updated: Date.now(), inactive: true });
+  };
+
+  loadContentScript();
+  const a = document.createElement('a');
+  a.href = 'https://github.com/some/old-repo';
+  a.textContent = 'old-repo';
+  document.body.appendChild(a);
+
+  setTimeout(() => {
+    const badge = document.querySelector('.gh-stars-badge');
+    expect(badge).not.toBeNull();
+    const txt = badge.querySelector('.gh-stars-count');
+    expect(txt.textContent).toBe('🧟 1,234');
+    // star svg should still be present for inactive
+    const svg = badge.querySelector('svg');
+    expect(svg).not.toBeNull();
+    done();
+  }, 10);
+});
+
+test('displays archived gravestone and removes star svg when background signals archived', (done) => {
+  window.location = new URL('https://example.com/');
+  global.chrome.runtime.sendMessage = (msg, cb) => {
+    // background says repo is archived
+    cb({ stars: 9999, updated: Date.now(), archived: true });
+  };
+
+  loadContentScript();
+  const a = document.createElement('a');
+  a.href = 'https://github.com/some/archived-repo';
+  a.textContent = 'archived-repo';
+  document.body.appendChild(a);
+
+  setTimeout(() => {
+    const badge = document.querySelector('.gh-stars-badge');
+    expect(badge).not.toBeNull();
+    const txt = badge.querySelector('.gh-stars-count');
+    expect(txt.textContent).toBe('🪦');
+    // star svg should be removed for archived
+    const svg = badge.querySelector('svg');
+    expect(svg).toBeNull();
+    done();
+  }, 10);
+});

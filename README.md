@@ -49,6 +49,23 @@ We use Jest for unit and integration tests. Some tests run in a DOM-like environ
 
 	npm test
 
+### End-to-end (Playwright)
+
+We provide a Playwright E2E test that loads `test/test-page.html`, injects a minimal `chrome` shim and the extension's `src/content.js`, and asserts badges render for Active / Archived / Stale / Missing scenarios.
+
+Install Playwright and run the E2E tests:
+
+```bash
+# Install Playwright and browsers
+npm install -D playwright @playwright/test
+npx playwright install
+
+# Run E2E tests
+npm run test:e2e
+```
+
+The E2E tests use a file:// URL to load `test/test-page.html` and rely on `page.addInitScript` to inject the content script and a small `chrome` shim so the test doesn't need a loaded Chrome extension.
+
 Notes:
 - The DOM tests require `jest-environment-jsdom` which is included in devDependencies.
 - Tests mock the `chrome` APIs where appropriate so you can run them locally.

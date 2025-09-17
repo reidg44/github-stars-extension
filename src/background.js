@@ -79,6 +79,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const ttlMs = await new Promise((resolve) =>
           getTtlMsFromSettings(resolve)
         );
+        const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
+        function computeInactiveFlag(updatedAt) {
+          try {
+            if (!updatedAt) return false;
+            const ts = Date.parse(updatedAt);
+            if (Number.isNaN(ts)) return false;
+            return Date.now() - ts > ONE_MONTH_MS;
+          } catch (e) {
+            return false;
+          }
+        }
         const cached = await getCached(chrome.storage.local, owner, repo);
         chrome.storage.sync.get(
           ['gh_token', 'debug_logging'],
@@ -96,6 +107,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               }
 
               // If we have a fresh cached value, perform a quick HEAD check to ensure the repo still exists.
+              const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
+              function computeInactiveFlag(updatedAt) {
+                try {
+                  if (!updatedAt) return false;
+                  const ts = Date.parse(updatedAt);
+                  if (Number.isNaN(ts)) return false;
+                  return Date.now() - ts > ONE_MONTH_MS;
+                } catch (e) {
+                  return false;
+                }
+              }
+
               if (isFresh(cached, ttlMs)) {
                 try {
                   const url = `https://api.github.com/repos/${owner}/${repo}`;
@@ -114,7 +137,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   sendResponse({
                     stars: cached.data.stargazers_count,
                     updated: cached.ts,
-                    cached: true
+                    cached: true,
+                    archived: !!cached.data.archived,
+                    inactive: computeInactiveFlag(cached.data.updated_at)
                   });
                   return;
                 } catch (headErr) {
@@ -122,7 +147,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   sendResponse({
                     stars: cached.data.stargazers_count,
                     updated: cached.ts,
-                    cached: true
+                    cached: true,
+                    archived: !!cached.data.archived,
+                    inactive: computeInactiveFlag(cached.data.updated_at)
                   });
                   return;
                 }
@@ -135,7 +162,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               sendResponse({
                 stars: json.stargazers_count,
                 updated: Date.now(),
-                cached: false
+                cached: false,
+                archived: !!json.archived,
+                inactive: computeInactiveFlag(json.updated_at)
               });
             } catch (err) {
               // If the error indicates the repo is missing (404), prefer to signal notFound
@@ -160,7 +189,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   stars: cached.data.stargazers_count,
                   updated: cached.ts,
                   cached: true,
-                  stale: true
+                  stale: true,
+                  archived: !!cached.data.archived,
+                  inactive: computeInactiveFlag(cached.data.updated_at)
                 });
               } else {
                 sendResponse({ error: msg });

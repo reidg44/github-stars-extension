@@ -5,16 +5,19 @@
   "description": "Chrome extension that shows GitHub star counts next to repo links",
   "scripts": {
     "test": "jest",
+    "test:e2e": "playwright test",
     "build": "esbuild src/background.js --bundle --outfile=dist/background.js --platform=browser --target=es2020",
     "lint": "eslint . --ext .js",
     "package": "node ./scripts/package.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "archiver": "^5.3.1",
     "esbuild": "^0.18.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
     "jest-environment-jsdom": "^29.7.0",
-    "archiver": "^5.3.1"
+    "playwright": "^1.55.0"
   },
   "jest": {
     "testEnvironment": "node"

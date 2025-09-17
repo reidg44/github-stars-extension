@@ -133,6 +133,19 @@
     return { span, txt };
   }
 
+  // Helper: compute inactivity from an 'updated' timestamp (number or string).
+  function computeInactiveFromUpdated(updated) {
+    try {
+      if (!updated) return false;
+      const ts = typeof updated === 'number' ? updated : Date.parse(updated);
+      if (Number.isNaN(ts)) return false;
+      const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
+      return Date.now() - ts > ONE_MONTH_MS;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function insertBadge(anchor, owner, repo) {
     if (!badgesEnabled) return;
     if (hostIsDisabled()) return;
@@ -180,11 +193,42 @@
             txt.textContent = '-';
           }
         } else {
-          txt.textContent = response.stars.toLocaleString();
-          span.title = `Updated: ${new Date(
-            response.updated
-          ).toLocaleString()}`;
-          if (response.stale) span.classList.add('stale');
+          // if archived, show gravestone emoji only
+          if (response.archived) {
+            txt.textContent = '🪦';
+            span.title = 'Repository archived';
+            span.classList.add('archived');
+            try {
+              const svg = span.querySelector('svg');
+              if (svg && svg.remove) svg.remove();
+            } catch (e) {
+              // ignore
+            }
+          } else {
+            // compute display for stars; if inactive, prefix with zombie emoji
+            // Background may sometimes only send `stale: true` without `inactive`.
+            // In that case we compute an inactivity flag locally from the `updated` timestamp
+            // so the UI still shows the zombie indicator.
+            const inactiveFlag =
+              typeof response.inactive === 'boolean'
+                ? response.inactive
+                : computeInactiveFromUpdated(response.updated);
+
+            const countText = (response.stars || 0).toLocaleString();
+            if (inactiveFlag) {
+              txt.textContent = `🧟 ${countText}`;
+              span.title = `Last updated more than 30 days ago. Updated: ${new Date(
+                response.updated
+              ).toLocaleString()}`;
+              span.classList.add('inactive');
+            } else {
+              txt.textContent = countText;
+              span.title = `Updated: ${new Date(
+                response.updated
+              ).toLocaleString()}`;
+            }
+            if (response.stale) span.classList.add('stale');
+          }
         }
       }
     );
@@ -266,15 +310,29 @@
     repos.forEach((r) => insertBadge(r.el, r.owner, r.repo));
   }
 
-  // Initial scan
-  scanAndInsert();
+  // Run initial scan and attach a MutationObserver after DOM is ready.
+  function onDomReady(cb) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', cb);
+    } else {
+      // already ready
+      cb();
+    }
+  }
 
-  // Observe DOM changes for dynamically added links
-  const mo = new MutationObserver(() => {
+  onDomReady(() => {
     scanAndInsert();
-  });
-  mo.observe(document.body || document.documentElement, {
-    childList: true,
-    subtree: true
+
+    // Observe DOM changes for dynamically added links
+    const mo = new MutationObserver(() => {
+      scanAndInsert();
+    });
+    const target = document.body || document.documentElement;
+    if (target && typeof target.nodeType === 'number') {
+      mo.observe(target, {
+        childList: true,
+        subtree: true
+      });
+    }
   });
 })();
