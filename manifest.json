@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Stars Inline Badges",
+  "version": "0.1.0",
+  "description": "Show GitHub star counts next to GitHub repo links on any page.",
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": ["https://api.github.com/*"],
+  "background": {
+    "service_worker": "dist/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content.js"],
+      "css": ["src/styles/badge.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "GitHub Stars"
+  }
+}

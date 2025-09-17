@@ -1,0 +1,20 @@
+.gh-stars-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  background: rgba(27,31,35,0.08);
+  border-radius: 12px;
+  color: #24292e;
+  font-size: 12px;
+  line-height: 1;
+}
+.gh-stars-badge svg {
+  width: 12px;
+  height: 12px;
+  fill: #f6c85f;
+}
+.gh-stars-badge.stale {
+  opacity: 0.7;
+}

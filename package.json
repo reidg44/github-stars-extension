@@ -1,0 +1,19 @@
+{
+  "name": "github-stars-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that shows GitHub star counts next to repo links",
+  "scripts": {
+    "test": "jest",
+    "build": "esbuild src/background.js --bundle --outfile=dist/background.js --platform=browser --target=es2020",
+    "lint": "eslint . --ext .js"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "esbuild": "^0.18.0",
+    "eslint": "^8.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
