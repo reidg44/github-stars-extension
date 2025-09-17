@@ -34,7 +34,8 @@
     return anchors
       .map((a) => ({ el: a, parsed: parseUrl(a.href) }))
       .filter((x) => x.parsed)
-      .map((x) => ({ el: x.el, owner: x.parsed.owner, repo: x.parsed.repo }));
+      .map((x) => ({ el: x.el, owner: x.parsed.owner, repo: x.parsed.repo }))
+      .filter((item) => shouldInsertBadge(item.el, item.owner, item.repo));
   }
 
   let badgesEnabled = true;
@@ -133,6 +134,77 @@
         }
       }
     );
+  }
+
+  // Decide whether to insert a badge for this anchor on this page.
+  function shouldInsertBadge(anchor, owner, repo) {
+    try {
+      const host = window.location.hostname.toLowerCase();
+      // If we're not on GitHub itself, allow badges everywhere (subject to disabled domains)
+      if (!host.endsWith('github.com')) return true;
+
+      // On GitHub pages, be conservative: skip links that are within UI chrome
+      const DENY_SELECTORS = [
+        '.social-count',
+        '.js-social-count',
+        '.pagehead',
+        '.pagehead-actions',
+        'header',
+        'nav',
+        'button',
+        '.btn',
+        '.dropdown',
+        '.commit-meta',
+        '.file-header',
+        '.file',
+        '.reponav',
+        '.octicon',
+        '.avatar',
+        '.discussion-timeline',
+        '.toc',
+        '.repo-list'
+      ];
+
+      for (const sel of DENY_SELECTORS) {
+        if (anchor.closest(sel)) return false;
+      }
+
+      // If the anchor is icon/image-only (no visible text), skip — it's likely UI.
+      const text = (anchor.textContent || '').trim();
+      const hasIcon = !!anchor.querySelector('svg, img');
+      if (hasIcon && text.length === 0) return false;
+
+      // Avoid adding badges to links that point to the same repository page
+      // e.g., when viewing /owner/repo don't badge intra-repo links
+      const p = window.location.pathname.split('/').filter(Boolean);
+      if (p.length >= 2) {
+        const currentOwner = p[0];
+        const currentRepo = p[1];
+        if (
+          currentOwner.toLowerCase() === owner.toLowerCase() &&
+          currentRepo.toLowerCase() === repo.toLowerCase()
+        ) {
+          return false;
+        }
+      }
+
+      // Only add a badge if the anchor shows some readable text (guard against tiny UI links)
+      if (text.length < 2) return false;
+
+      return true;
+    } catch (e) {
+      return true; // on error, be permissive
+    }
+  }
+
+  // Expose helper for tests when running in JS DOM environment
+  try {
+    if (typeof window !== 'undefined') {
+      window.__ghStarsTest = window.__ghStarsTest || {};
+      window.__ghStarsTest.shouldInsertBadge = shouldInsertBadge;
+    }
+  } catch (e) {
+    // ignore
   }
 
   function scanAndInsert() {

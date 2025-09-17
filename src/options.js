@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const tokenEl = document.getElementById('token');
   const ttlEl = document.getElementById('ttl');
   const saveBtn = document.getElementById('save');
+  // legacy status element (kept for screen-reader aria-live). We use toasts for visual feedback.
   const status = document.getElementById('status');
+  const toastContainer = document.getElementById('toast-container');
   const disableSiteBtn = document.getElementById('disable-site');
   const resetBtn = document.getElementById('reset');
 
@@ -70,8 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set(
       { gh_token: token, cache_ttl_minutes: ttl, badges_enabled: enabled },
       () => {
-        status.textContent = 'Saved.';
-        setTimeout(() => (status.textContent = ''), 2000);
+        showToast('Saved.', 'success');
       }
     );
   });
@@ -91,8 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const host = u.hostname;
           addDomainToList(host);
           saveDomains();
-          status.textContent = `Disabled for ${host}`;
-          setTimeout(() => (status.textContent = ''), 2000);
+          showToast(`Disabled for ${host}`, 'success');
         } catch (e) {
           alert('Could not parse current site URL');
         }
@@ -123,9 +123,25 @@ document.addEventListener('DOMContentLoaded', () => {
         disabled_domains: []
       },
       () => {
-        status.textContent = 'Reset to defaults';
-        setTimeout(() => (status.textContent = ''), 2000);
+        showToast('Reset to defaults', 'success');
       }
     );
   });
+
+  // Toast helper
+  function showToast(message, type = 'success', ms = 2500) {
+    if (!toastContainer) return;
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    toastContainer.appendChild(el);
+    // update aria-live status for screen readers
+    if (status) {
+      status.textContent = message;
+      setTimeout(() => (status.textContent = ''), ms);
+    }
+    setTimeout(() => {
+      el.remove();
+    }, ms);
+  }
 });
