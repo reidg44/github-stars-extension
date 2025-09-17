@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetBtn = document.getElementById('reset');
 
   chrome.storage.sync.get(
-    ['gh_token', 'cache_ttl_minutes', 'badges_enabled'],
+    ['gh_token', 'cache_ttl_minutes', 'badges_enabled', 'debug_logging'],
     (items) => {
       if (items.gh_token) tokenEl.value = items.gh_token;
       if (items.cache_ttl_minutes) ttlEl.value = items.cache_ttl_minutes;
@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('enabled').checked = false;
       } else {
         document.getElementById('enabled').checked = true;
+      }
+      if (items.debug_logging) {
+        document.getElementById('debug-logging').checked = true;
+      } else {
+        document.getElementById('debug-logging').checked = false;
       }
     }
   );
@@ -69,8 +74,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = tokenEl.value.trim();
     const ttl = Math.max(1, parseInt(ttlEl.value, 10) || 60);
     const enabled = document.getElementById('enabled').checked;
+    const debug = document.getElementById('debug-logging').checked;
     chrome.storage.sync.set(
-      { gh_token: token, cache_ttl_minutes: ttl, badges_enabled: enabled },
+      {
+        gh_token: token,
+        cache_ttl_minutes: ttl,
+        badges_enabled: enabled,
+        debug_logging: debug
+      },
       () => {
         showToast('Saved.', 'success');
       }

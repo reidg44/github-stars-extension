@@ -70,6 +70,29 @@
         : [];
     });
 
+  // Log a page-visible warning once if no GH token is configured.
+  try {
+    if (chrome && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.get(['gh_token'], (items) => {
+        const token = items && items.gh_token;
+        if (!token) {
+          try {
+            if (!window.__ghStarsLoggedTokenMissing) {
+              console.warn(
+                'GitHub token not present for GitHub Stars extension; add one in extension options to increase rate limits'
+              );
+              window.__ghStarsLoggedTokenMissing = true;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+
   // listen for changes
   if (chrome && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -124,10 +147,35 @@
       (response) => {
         if (!response) return;
         if (response.error) {
-          // If the background marked this repo as not found (404), show a distinct indicator
-          if (response.notFound) {
+          // debug logging (enable by setting window.__ghStarsDebug = true in the page console)
+          try {
+            if (window.__ghStarsDebug) {
+              console.log('[gh-stars] GET_STARS error', {
+                owner,
+                repo,
+                payload: response
+              });
+            }
+          } catch (e) {
+            // ignore
+          }
+          // Treat explicit notFound flag OR common 404/not found messages as missing repo
+          const errMsg = response.error ? String(response.error) : '';
+          const looks404 =
+            response.notFound ||
+            /not\s*found/i.test(errMsg) ||
+            /404/.test(errMsg);
+          if (looks404) {
+            // Show only the banned emoji for not-found repos. Remove/hide the svg star.
             txt.textContent = '🚫';
             span.title = 'Repository not found';
+            span.classList.add('notfound');
+            try {
+              const svg = span.querySelector('svg');
+              if (svg && svg.remove) svg.remove();
+            } catch (e) {
+              // ignore DOM errors
+            }
           } else {
             txt.textContent = '-';
           }

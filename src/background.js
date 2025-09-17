@@ -80,45 +80,94 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           getTtlMsFromSettings(resolve)
         );
         const cached = await getCached(chrome.storage.local, owner, repo);
-        if (isFresh(cached, ttlMs)) {
-          sendResponse({
-            stars: cached.data.stargazers_count,
-            updated: cached.ts,
-            cached: true
-          });
-          return;
-        }
+        chrome.storage.sync.get(
+          ['gh_token', 'debug_logging'],
+          async (items) => {
+            let debug = false;
+            try {
+              const token = items.gh_token;
+              debug = !!items.debug_logging;
+              if (debug)
+                console.debug('[gh-stars] GET_STARS', { owner, repo, cached });
+              if (!token) {
+                console.warn(
+                  'GitHub token not present; requests will be unauthenticated and may be rate-limited'
+                );
+              }
 
-        chrome.storage.sync.get(['gh_token'], async (items) => {
-          try {
-            const token = items.gh_token;
-            const json = await ghApi.getRepo(owner, repo, token);
-            await setCached(chrome.storage.local, owner, repo, json);
-            sendResponse({
-              stars: json.stargazers_count,
-              updated: Date.now(),
-              cached: false
-            });
-          } catch (err) {
-            // If fetch failed but we have stale cached data, return it as fallback
-            if (cached) {
+              // If we have a fresh cached value, perform a quick HEAD check to ensure the repo still exists.
+              if (isFresh(cached, ttlMs)) {
+                try {
+                  const url = `https://api.github.com/repos/${owner}/${repo}`;
+                  const headers = { Accept: 'application/vnd.github.v3+json' };
+                  if (token) headers['Authorization'] = `token ${token}`;
+                  const headResp = await fetch(url, {
+                    method: 'HEAD',
+                    headers
+                  });
+                  // If HEAD reports 404, prefer signaling notFound even though cache is fresh
+                  if (headResp.status === 404) {
+                    sendResponse({ error: 'Not Found', notFound: true });
+                    return;
+                  }
+                  // otherwise, return the cached value
+                  sendResponse({
+                    stars: cached.data.stargazers_count,
+                    updated: cached.ts,
+                    cached: true
+                  });
+                  return;
+                } catch (headErr) {
+                  // network errors when checking HEAD -> fall back to cached
+                  sendResponse({
+                    stars: cached.data.stargazers_count,
+                    updated: cached.ts,
+                    cached: true
+                  });
+                  return;
+                }
+              }
+
+              const json = await ghApi.getRepo(owner, repo, token);
+              if (debug)
+                console.debug('[gh-stars] API response', { owner, repo, json });
+              await setCached(chrome.storage.local, owner, repo, json);
               sendResponse({
-                stars: cached.data.stargazers_count,
-                updated: cached.ts,
-                cached: true,
-                stale: true
+                stars: json.stargazers_count,
+                updated: Date.now(),
+                cached: false
               });
-            } else {
-              // Mark notFound for 404 responses so the UI can show a different indicator
+            } catch (err) {
+              // If the error indicates the repo is missing (404), prefer to signal notFound
               const msg = err && err.message ? String(err.message) : '';
-              if (/404/.test(msg)) {
+              const status = err && err.status ? Number(err.status) : null;
+              const is404 =
+                status === 404 || /not\s*found/i.test(msg) || /404/.test(msg);
+              if (debug)
+                console.debug('[gh-stars] GET_STARS error', {
+                  owner,
+                  repo,
+                  err
+                });
+              if (is404) {
                 sendResponse({ error: msg, notFound: true });
+                return;
+              }
+
+              // For other errors, if fetch failed but we have stale cached data, return it as fallback
+              if (cached) {
+                sendResponse({
+                  stars: cached.data.stargazers_count,
+                  updated: cached.ts,
+                  cached: true,
+                  stale: true
+                });
               } else {
                 sendResponse({ error: msg });
               }
             }
           }
-        });
+        );
       } catch (err) {
         sendResponse({ error: err.message });
       }

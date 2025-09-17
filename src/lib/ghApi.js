@@ -3,7 +3,20 @@
 async function fetchJson(url, options = {}, retries = 2) {
   try {
     const resp = await fetch(url, options);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const err = new Error(`HTTP ${resp.status}`);
+      // attach status for downstream detection
+      err.status = resp.status;
+      // attempt to read json body for message if present
+      try {
+        const body = await resp.json();
+        if (body && body.message)
+          err.message = `${err.message} - ${body.message}`;
+      } catch (e) {
+        // ignore parse errors
+      }
+      throw err;
+    }
     return resp.json();
   } catch (err) {
     if (retries > 0) {
