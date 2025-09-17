@@ -39,36 +39,62 @@ Make sure you run the build before loading the extension if you've edited backgr
 
 ## Testing
 
-We use Jest for unit and integration tests. Some tests run in a DOM-like environment using jsdom.
+This project includes:
+- Unit/integration tests with Jest (some tests run in a jsdom environment).
+- An end-to-end (E2E) smoke test implemented with Playwright that loads `test/test-page.html`, injects a small `chrome` shim and the extension's `src/content.js`, and verifies the badges for Active / Archived / Stale / Missing cases.
+
+Unit tests (Jest)
 
 - Install dev dependencies (if not already):
 
-	npm install
+```bash
+npm install
+```
 
-- Run tests:
-
-	npm test
-
-### End-to-end (Playwright)
-
-We provide a Playwright E2E test that loads `test/test-page.html`, injects a minimal `chrome` shim and the extension's `src/content.js`, and asserts badges render for Active / Archived / Stale / Missing scenarios.
-
-Install Playwright and run the E2E tests:
+- Run the unit tests:
 
 ```bash
-# Install Playwright and browsers
+npm test
+```
+
+E2E tests (Playwright)
+
+The E2E tests are under the `e2e/` folder and are configured by the root `playwright.config.js` (Playwright will run tests in `e2e/` by default).
+
+- Install Playwright test runner and browsers:
+
+```bash
 npm install -D playwright @playwright/test
 npx playwright install
+```
 
-# Run E2E tests
+- Run the E2E tests:
+
+```bash
 npm run test:e2e
 ```
 
-The E2E tests use a file:// URL to load `test/test-page.html` and rely on `page.addInitScript` to inject the content script and a small `chrome` shim so the test doesn't need a loaded Chrome extension.
+- View HTML report for the last run:
 
-Notes:
-- The DOM tests require `jest-environment-jsdom` which is included in devDependencies.
-- Tests mock the `chrome` APIs where appropriate so you can run them locally.
+```bash
+npx playwright show-report
+```
+
+Troubleshooting & notes
+
+- Single Playwright config: this repo uses the root `playwright.config.js` to avoid accidental discovery of unit tests under `test/` by Playwright. A duplicate `e2e/playwright.config.js` was removed to prevent conflicting configs.
+- Playwright `addInitScript` usage: Playwright requires `page.addInitScript({ content: '...' })` or `page.addInitScript({ path: '/abs/path/to/file.js' })`. If you see errors like "Either path or content property must be present", change any `{ script: ... }` calls to `{ content: ... }`.
+- MutationObserver errors in tests: some earlier runs injected the content script before `document.body` existed which caused `MutationObserver.observe` to throw. The content script now waits for DOMContentLoaded and guards `observe()` so the tests won't fail with "parameter 1 is not of type 'Node'".
+- Missing GitHub token warning: when running tests you may see a console warning "GitHub token not present..." — this is expected unless you've configured a PAT in the extension options. The tests mock `chrome` APIs to avoid real network usage.
+- If Playwright tries to run Jest tests (you'll see ReferenceError: beforeEach/test is not defined), ensure Playwright's `testDir` points to `e2e/` (see root `playwright.config.js`).
+
+If you change the content script or background code, rebuild the background bundle for MV3 using:
+
+```bash
+npm run build
+```
+
+Run the unit tests and E2E tests locally after install as shown above.
 
 ## Loading in Chrome (unpacked)
 
