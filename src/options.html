@@ -33,8 +33,12 @@
     <h1>GitHub Stars Options</h1>
     <label>GitHub Personal Access Token (optional)</label>
     <input id="token" type="text" placeholder="ghp_..." />
-    <p id="pat-help" style="font-size:90%;color:#444;margin-top:6px">A personal access token (PAT) can be used to increase rate limits. Create one at <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com/settings/tokens</a> with the <code>public_repo</code> scope and paste it here. Keep it private.</p>
-    <p style="font-size:85%;color:#666;margin-top:6px">Note: the token is stored in <code>chrome.storage.sync</code> for convenience — treat it like a password.</p>
+    <p id="pat-help" style="font-size:90%;color:#444;margin-top:6px">A personal access token (PAT) can be used to
+        increase rate limits. Create one at <a href="https://github.com/settings/tokens" target="_blank"
+            rel="noopener">github.com/settings/tokens</a> with the <code>public_repo</code> scope and paste it here.
+        Keep it private.</p>
+    <p style="font-size:85%;color:#666;margin-top:6px">Note: the token is stored in <code>chrome.storage.sync</code> for
+        convenience — treat it like a password.</p>
 
     <label>Cache TTL (minutes)</label>
     <input id="ttl" type="number" min="1" value="60" />
@@ -42,7 +46,8 @@
 
     <h2>Per-domain opt-out</h2>
     <p>Add domains where you don't want badges to appear (one domain per entry). Examples: <code>example.com</code> or
-        <code>sub.example.com</code>.</p>
+        <code>sub.example.com</code>.
+    </p>
     <div>
         <input id="domain-input" type="text" placeholder="example.com" />
         <button id="add-domain">Add</button>

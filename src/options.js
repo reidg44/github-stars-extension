@@ -104,15 +104,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Reset to defaults
   resetBtn.addEventListener('click', () => {
-    if (!confirm('Reset options to defaults? This will clear the token and disabled domains.')) return;
+    if (
+      !confirm(
+        'Reset options to defaults? This will clear the token and disabled domains.'
+      )
+    )
+      return;
     tokenEl.value = '';
     ttlEl.value = 60;
     document.getElementById('enabled').checked = true;
     // clear list
     disabledListEl.innerHTML = '';
-    chrome.storage.sync.set({ gh_token: '', cache_ttl_minutes: 60, badges_enabled: true, disabled_domains: [] }, () => {
-      status.textContent = 'Reset to defaults';
-      setTimeout(() => (status.textContent = ''), 2000);
-    });
+    chrome.storage.sync.set(
+      {
+        gh_token: '',
+        cache_ttl_minutes: 60,
+        badges_enabled: true,
+        disabled_domains: []
+      },
+      () => {
+        status.textContent = 'Reset to defaults';
+        setTimeout(() => (status.textContent = ''), 2000);
+      }
+    );
   });
 });
