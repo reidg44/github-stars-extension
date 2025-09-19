@@ -128,16 +128,21 @@
     txt.className = 'gh-stars-count';
     txt.textContent = '…';
 
+    const zombiePrefix = document.createElement('span');
+    zombiePrefix.className = 'gh-stars-zombie';
+    zombiePrefix.style.display = 'none'; // hidden by default
+
+    span.appendChild(zombiePrefix);
     span.appendChild(svg);
     span.appendChild(txt);
-    return { span, txt };
+    return { span, txt, zombiePrefix };
   }
 
-  // Helper: compute inactivity from an 'updated' timestamp (number or string).
-  function computeInactiveFromUpdated(updated) {
+  // Helper: compute inactivity from a 'pushed_at' timestamp (number or string).
+  function computeInactiveFromPushed(pushed) {
     try {
-      if (!updated) return false;
-      const ts = typeof updated === 'number' ? updated : Date.parse(updated);
+      if (!pushed) return false;
+      const ts = typeof pushed === 'number' ? pushed : Date.parse(pushed);
       if (Number.isNaN(ts)) return false;
       const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
       return Date.now() - ts > ONE_MONTH_MS;
@@ -152,7 +157,7 @@
     if (anchor.dataset.ghStarsBadgeInserted) return;
     anchor.dataset.ghStarsBadgeInserted = '1';
 
-    const { span, txt } = makeBadgeElement();
+    const { span, txt, zombiePrefix } = makeBadgeElement();
     anchor.insertAdjacentElement('afterend', span);
 
     chrome.runtime.sendMessage(
@@ -209,16 +214,21 @@
             const inactiveFlag =
               typeof response.inactive === 'boolean'
                 ? response.inactive
-                : computeInactiveFromUpdated(response.updated);
+                : computeInactiveFromPushed(response.pushed_at);
 
             const countText = (response.stars || 0).toLocaleString();
             if (inactiveFlag) {
-              txt.textContent = `🧟 ${countText}`;
-              span.title = `Last updated more than 30 days ago. Updated: ${new Date(
-                response.updated
-              ).toLocaleString()}`;
+              zombiePrefix.textContent = '🧟';
+              zombiePrefix.style.display = 'inline';
+              txt.textContent = countText;
+              span.title = `Last pushed more than 30 days ago. Pushed: ${
+                response.pushed_at
+                  ? new Date(response.pushed_at).toLocaleString()
+                  : 'Unknown'
+              }`;
               span.classList.add('inactive');
             } else {
+              zombiePrefix.style.display = 'none';
               txt.textContent = countText;
               span.title = `Updated: ${new Date(
                 response.updated

@@ -80,11 +80,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           getTtlMsFromSettings(resolve)
         );
         const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
-        // computeInactiveFlag: returns true if `updatedAt` is more than ~30 days ago.
-        const computeInactiveFlag = (updatedAt) => {
+        // computeInactiveFlag: returns true if `pushedAt` is more than ~30 days ago.
+        const computeInactiveFlag = (pushedAt) => {
           try {
-            if (!updatedAt) return false;
-            const ts = Date.parse(updatedAt);
+            if (!pushedAt) return false;
+            const ts = Date.parse(pushedAt);
             if (Number.isNaN(ts)) return false;
             return Date.now() - ts > ONE_MONTH_MS;
           } catch (e) {
@@ -132,10 +132,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                       cached.data && cached.data.updated_at
                         ? cached.data.updated_at
                         : new Date(cached.ts).toISOString(),
+                    pushed_at:
+                      cached.data && cached.data.pushed_at
+                        ? cached.data.pushed_at
+                        : null,
                     fetched_at: cached.ts,
                     cached: true,
                     archived: !!cached.data.archived,
-                    inactive: computeInactiveFlag(cached.data.updated_at)
+                    inactive: computeInactiveFlag(cached.data.pushed_at)
                   });
                   return;
                 } catch (headErr) {
@@ -146,10 +150,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                       cached.data && cached.data.updated_at
                         ? cached.data.updated_at
                         : new Date(cached.ts).toISOString(),
+                    pushed_at:
+                      cached.data && cached.data.pushed_at
+                        ? cached.data.pushed_at
+                        : null,
                     fetched_at: cached.ts,
                     cached: true,
                     archived: !!cached.data.archived,
-                    inactive: computeInactiveFlag(cached.data.updated_at)
+                    inactive: computeInactiveFlag(cached.data.pushed_at)
                   });
                   return;
                 }
@@ -163,10 +171,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 stars: json.stargazers_count,
                 // use the repo's updated_at provided by the API
                 updated: json.updated_at || new Date().toISOString(),
+                // use the repo's pushed_at for inactive calculation
+                pushed_at: json.pushed_at || null,
                 fetched_at: Date.now(),
                 cached: false,
                 archived: !!json.archived,
-                inactive: computeInactiveFlag(json.updated_at)
+                inactive: computeInactiveFlag(json.pushed_at)
               });
             } catch (err) {
               // If the error indicates the repo is missing (404), prefer to signal notFound
@@ -193,10 +203,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                     cached.data && cached.data.updated_at
                       ? cached.data.updated_at
                       : new Date(cached.ts).toISOString(),
+                  pushed_at:
+                    cached.data && cached.data.pushed_at
+                      ? cached.data.pushed_at
+                      : null,
                   fetched_at: cached.ts,
                   cached: true,
                   archived: !!cached.data.archived,
-                  inactive: computeInactiveFlag(cached.data.updated_at)
+                  inactive: computeInactiveFlag(cached.data.pushed_at)
                 });
               } else {
                 sendResponse({ error: msg });

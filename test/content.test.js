@@ -122,8 +122,17 @@ test('displays inactive (zombie) indicator when background signals inactive', (d
   setTimeout(() => {
     const badge = document.querySelector('.gh-stars-badge');
     expect(badge).not.toBeNull();
+
+    // Check zombie emoji is in the prefix element
+    const zombiePrefix = badge.querySelector('.gh-stars-zombie');
+    expect(zombiePrefix).not.toBeNull();
+    expect(zombiePrefix.textContent).toBe('🧟');
+    expect(zombiePrefix.style.display).toBe('inline');
+
+    // Check star count is in the text element (without zombie)
     const txt = badge.querySelector('.gh-stars-count');
-    expect(txt.textContent).toBe('🧟 1,234');
+    expect(txt.textContent).toBe('1,234');
+
     // star svg should still be present for inactive
     const svg = badge.querySelector('svg');
     expect(svg).not.toBeNull();

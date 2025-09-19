@@ -35,16 +35,16 @@ window.chrome.runtime = window.chrome.runtime || {
     }
     // Special-case the DopplerHQ example used in the test page: treat as archived
     if (owner.toLowerCase() === 'dopplerhq' && repo.toLowerCase().includes('awesome-interview-questions')) {
-      cb && cb({ stars: 100, updated: Date.now() - 1000 * 60 * 60 * 24 * 400, archived: true });
+      cb && cb({ stars: 100, updated: Date.now() - 1000 * 60 * 60 * 24 * 400, pushed_at: Date.now() - 1000 * 60 * 60 * 24 * 400, archived: true });
       return;
     }
     if (repo.includes('project-based-learning')) {
-      // simulate inactive repo: updated more than 30 days ago
-      cb && cb({ stars: 50, updated: Date.now() - 1000 * 60 * 60 * 24 * 40, inactive: true });
+      // simulate inactive repo: pushed more than 30 days ago
+      cb && cb({ stars: 50, updated: Date.now() - 1000 * 60 * 60 * 24 * 5, pushed_at: Date.now() - 1000 * 60 * 60 * 24 * 40, inactive: true });
       return;
     }
     // default active repo
-    cb && cb({ stars: 1234, updated: Date.now() });
+    cb && cb({ stars: 1234, updated: Date.now(), pushed_at: Date.now() });
   }
 };
 `;
@@ -78,8 +78,21 @@ test('E2E: badges render for active, inactive, archived, and missing', async ({
       const next = a.nextElementSibling;
       if (!next || !next.classList.contains('gh-stars-badge')) return;
       const id = a.id || a.href;
-      const txt = next.querySelector('.gh-stars-count')?.textContent || '';
-      out[id] = txt.trim();
+
+      // Get zombie prefix if it exists and is visible
+      const zombiePrefix = next.querySelector('.gh-stars-zombie');
+      const zombieText =
+        zombiePrefix && zombiePrefix.style.display !== 'none'
+          ? zombiePrefix.textContent
+          : '';
+
+      // Get count text
+      const countText =
+        next.querySelector('.gh-stars-count')?.textContent || '';
+
+      // Combine zombie + count for output (matching the visual appearance)
+      const fullText = zombieText + (zombieText ? ' ' : '') + countText;
+      out[id] = fullText.trim();
     });
     return out;
   });
