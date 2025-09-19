@@ -325,7 +325,23 @@
         '.avatar',
         '.discussion-timeline',
         '.toc',
-        '.repo-list'
+        '.repo-list',
+        // GitHub Project Interface Elements
+        'dialog',
+        '[role="dialog"]',
+        '.side-panel',
+        '.sidebar',
+        '.metadata',
+        '.labels-list',
+        '.LabelsList-module__labelsListContainer--bS7BO',
+        '.IssueMetadata-module__metadataValue--d40kf',
+        // GitHub Label/Filter Links
+        '.label',
+        '.labels',
+        '[class*="label"]',
+        '[class*="Label"]',
+        '.tag',
+        '.tags'
       ];
 
       for (const sel of DENY_SELECTORS) {
