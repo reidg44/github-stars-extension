@@ -3,11 +3,63 @@ document.addEventListener('DOMContentLoaded', () => {
   const ttlEl = document.getElementById('ttl');
   const inactiveDaysEl = document.getElementById('inactive-days');
   const saveBtn = document.getElementById('save');
+  const toggleTokenBtn = document.getElementById('toggle-token');
   // legacy status element (kept for screen-reader aria-live). We use toasts for visual feedback.
   const status = document.getElementById('status');
   const toastContainer = document.getElementById('toast-container');
   const disableSiteBtn = document.getElementById('disable-site');
   const resetBtn = document.getElementById('reset');
+
+  // Token masking state
+  let actualToken = '';
+  let isTokenMasked = false;
+
+  function maskToken(token) {
+    if (!token) return '';
+    // Show first 4 and last 4 characters, mask the middle
+    if (token.length <= 8) return '•'.repeat(token.length);
+    return (
+      token.substring(0, 4) +
+      '•'.repeat(token.length - 8) +
+      token.substring(token.length - 4)
+    );
+  }
+
+  function updateTokenDisplay() {
+    if (isTokenMasked && actualToken) {
+      tokenEl.value = maskToken(actualToken);
+      tokenEl.readOnly = true;
+      toggleTokenBtn.textContent = 'Edit';
+    } else {
+      tokenEl.value = actualToken;
+      tokenEl.readOnly = false;
+      toggleTokenBtn.textContent = actualToken ? 'Hide' : 'Show';
+    }
+  }
+
+  // Toggle token visibility/editability
+  toggleTokenBtn.addEventListener('click', () => {
+    if (isTokenMasked) {
+      // Show token for editing
+      isTokenMasked = false;
+      updateTokenDisplay();
+      tokenEl.focus();
+    } else {
+      // Hide/mask token
+      if (tokenEl.value.trim()) {
+        actualToken = tokenEl.value.trim();
+        isTokenMasked = true;
+        updateTokenDisplay();
+      }
+    }
+  });
+
+  // Update actual token when user types (only when not masked)
+  tokenEl.addEventListener('input', () => {
+    if (!isTokenMasked) {
+      actualToken = tokenEl.value;
+    }
+  });
 
   chrome.storage.sync.get(
     [
@@ -19,7 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
       'debug_logging'
     ],
     (items) => {
-      if (items.gh_token) tokenEl.value = items.gh_token;
+      if (items.gh_token) {
+        actualToken = items.gh_token;
+        // If there's a saved token, show it masked initially
+        isTokenMasked = true;
+        updateTokenDisplay();
+      } else {
+        actualToken = '';
+        isTokenMasked = false;
+        updateTokenDisplay();
+      }
 
       // Handle migration from minutes to hours
       if (items.cache_ttl_hours) {
@@ -95,11 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   saveBtn.addEventListener('click', () => {
-    const token = tokenEl.value.trim();
+    // Get the actual token value (whether it's masked or not)
+    const token = isTokenMasked ? actualToken : tokenEl.value.trim();
     const ttl = Math.max(1, parseInt(ttlEl.value, 10) || 24);
     const inactiveDays = Math.max(1, parseInt(inactiveDaysEl.value, 10) || 60);
     const enabled = document.getElementById('enabled').checked;
     const debug = document.getElementById('debug-logging').checked;
+
+    // Update actual token if user was editing
+    if (!isTokenMasked) {
+      actualToken = token;
+    }
+
     chrome.storage.sync.set(
       {
         gh_token: token,
@@ -110,6 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       () => {
         showToast('Saved.', 'success');
+        // After saving, mask the token if it exists
+        if (token) {
+          isTokenMasked = true;
+          updateTokenDisplay();
+        }
       }
     );
   });
@@ -147,7 +220,12 @@ document.addEventListener('DOMContentLoaded', () => {
       )
     )
       return;
-    tokenEl.value = '';
+
+    // Reset token state
+    actualToken = '';
+    isTokenMasked = false;
+    updateTokenDisplay();
+
     ttlEl.value = 24;
     inactiveDaysEl.value = 60;
     document.getElementById('enabled').checked = true;

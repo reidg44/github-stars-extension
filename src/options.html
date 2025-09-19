@@ -22,6 +22,11 @@
             padding: 8px;
         }
 
+        input[type=text][readonly] {
+            background-color: #f5f5f5;
+            color: #666;
+        }
+
         button {
             margin-top: 12px;
             padding: 8px 12px;
@@ -59,7 +64,10 @@
 <body>
     <h1>GitHub Stars Options</h1>
     <label>GitHub Personal Access Token (optional)</label>
-    <input id="token" type="text" placeholder="ghp_..." />
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <input id="token" type="text" placeholder="ghp_..." style="flex: 1;" />
+        <button id="toggle-token" type="button" style="padding: 8px 12px; white-space: nowrap;">Show</button>
+    </div>
     <p id="pat-help" style="font-size:90%;color:#444;margin-top:6px">A personal access token (PAT) can be used to
         increase rate limits. Create one at <a href="https://github.com/settings/tokens" target="_blank"
             rel="noopener">github.com/settings/tokens</a> with the <code>public_repo</code> scope and paste it here.
