@@ -7,23 +7,14 @@
   },
   "content_scripts": [
     {
-      "css": [
-        "src/styles/badge.css"
-      ],
-      "js": [
-        "src/content.js"
-      ],
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
+      "css": ["src/styles/badge.css"],
+      "js": ["src/content.js"],
+      "matches": ["http://*/*", "https://*/*"],
       "run_at": "document_idle"
     }
   ],
   "description": "Show GitHub star counts next to GitHub repo links on any page.",
-  "host_permissions": [
-    "https://api.github.com/*"
-  ],
+  "host_permissions": ["https://api.github.com/*"],
   "icons": {
     "16": "icons/icon16.svg",
     "48": "icons/icon48.svg",
@@ -35,10 +26,6 @@
     "open_in_tab": true,
     "page": "src/options.html"
   },
-  "permissions": [
-    "storage",
-    "scripting",
-    "tabs"
-  ],
+  "permissions": ["storage", "scripting", "tabs"],
   "version": "0.1.0"
 }

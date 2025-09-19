@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background circle -->
-  <circle cx="24" cy="24" r="24" fill="#24292f"/>
-  
-  <!-- GitHub-style star -->
-  <path d="M24 8 L27.5 18 L38 18 L29.5 24.5 L33 34.5 L24 29 L15 34.5 L18.5 24.5 L10 18 L20.5 18 Z" 
+    <!-- Background circle -->
+    <circle cx="24" cy="24" r="24" fill="#24292f"/>
+    <!-- GitHub-style star -->
+    <path d="M24 8 L27.5 18 L38 18 L29.5 24.5 L33 34.5 L24 29 L15 34.5 L18.5 24.5 L10 18 L20.5 18 Z" 
         fill="#ffd700" 
         stroke="#fff" 
         stroke-width="1"/>
-  
-  <!-- Small badge indicator -->
-  <circle cx="36" cy="36" r="6" fill="#0969da"/>
-  <text x="36" y="39" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white" text-anchor="middle">★</text>
+    <!-- Small badge indicator -->
+    <circle cx="36" cy="36" r="6" fill="#0969da"/>
+    <text x="36" y="39" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white" text-anchor="middle">★</text>
 </svg>
