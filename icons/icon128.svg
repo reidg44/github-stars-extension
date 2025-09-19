@@ -2,12 +2,9 @@
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
     <!-- Background circle -->
     <circle cx="64" cy="64" r="64" fill="#24292f"/>
-    <!-- GitHub-style star -->
-    <path d="M64 20 L72.36 47.64 L96 47.64 L77.82 61.18 L86.18 88.82 L64 75.28 L41.82 88.82 L50.18 61.18 L32 47.64 L55.64 47.64 Z" 
+    <!-- Bigger GitHub-style star -->
+    <path d="M64 16 L76 44 L108 44 L82 64 L94 92 L64 76 L34 92 L46 64 L20 44 L52 44 Z" 
         fill="#ffd700" 
         stroke="#fff" 
         stroke-width="2"/>
-    <!-- Badge indicator (small rounded rectangle in bottom right) -->
-    <rect x="85" y="85" width="32" height="18" rx="9" fill="#0969da"/>
-    <text x="101" y="97" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white" text-anchor="middle">★</text>
 </svg>

@@ -2,7 +2,7 @@
 <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
     <!-- Background circle -->
     <circle cx="8" cy="8" r="8" fill="#24292f"/>
-    <!-- Simplified star for small size -->
-    <path d="M8 3 L9.5 6.5 L13 6.5 L10.5 8.5 L12 12 L8 10 L4 12 L5.5 8.5 L3 6.5 L6.5 6.5 Z" 
+    <!-- Bigger star for small size -->
+    <path d="M8 2 L10 6 L14 6 L11 9 L12.5 13 L8 11 L3.5 13 L5 9 L2 6 L6 6 Z" 
         fill="#ffd700"/>
 </svg>
