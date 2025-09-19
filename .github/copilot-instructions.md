@@ -71,7 +71,18 @@ try {
 - `chrome.storage.local` for API responses with timestamps
 - TTL-based freshness checking via `src/lib/cache.js`
 - Cache keys: `gh:owner/repo` format
-- Default TTL: 1 hour, user-configurable via options
+- Default TTL: 24 hours, user-configurable via options (changed from minutes to hours)
+
+## Options Configuration
+
+**User-configurable settings** via extension options page:
+
+- **GitHub Token**: Optional PAT for increased rate limits
+- **Cache TTL**: Time-to-live in hours (default: 24 hours)
+- **Inactive Threshold**: Days before marking repo as inactive (default: 60 days)
+- **Badge Toggle**: Enable/disable inline badges globally
+- **Domain Exclusions**: Per-domain opt-out list
+- **Debug Logging**: Enable console debug output
 
 ## Content Script Communication Pattern
 
@@ -82,16 +93,20 @@ Content script → Background worker message flow:
 chrome.runtime.sendMessage({ type: 'GET_STARS', owner, repo }, callback);
 
 // Background worker responds with:
-{ stars: 1234, updated: timestamp, archived: false }
+{ stars: 1234, updated: timestamp, pushed_at: timestamp, archived: false, inactive: boolean }
 // OR { error: 'message', notFound: true }
 ```
+
+**Note**: The `inactive` flag is computed by the background script using the user-configurable inactive threshold (default 60 days) and `pushed_at` timestamp.
 
 ## Badge State Visual Patterns
 
 - **Active repo**: ⭐ {count} (yellow star + number)
-- **Inactive repo**: 🧟 {count} (zombie emoji + star count for repos not updated in 30+ days)
+- **Inactive repo**: 🧟 ⭐ {count} (zombie emoji + yellow star + number for repos not pushed to in 30+ days)
 - **Archived repo**: 🪦 (gravestone emoji only, no star)
 - **Not found**: 🚫 (banned emoji only, no star)
+
+**Note**: Inactive detection changed from `updated_at` to `pushed_at` to focus on actual code activity rather than general repository activity (stars, issues, etc.). The threshold is now user-configurable (default 60 days) instead of hardcoded 30 days.
 
 ## Extension-Specific Conventions
 
@@ -117,6 +132,22 @@ Prevent duplicate badges via data attributes:
 if (anchor.dataset.ghStarsBadgeInserted) return;
 anchor.dataset.ghStarsBadgeInserted = '1';
 ```
+
+### Badge DOM Structure
+
+Badges use a modular DOM structure for flexible display:
+
+```html
+<span class="gh-stars-badge">
+  <span class="gh-stars-zombie" style="display: none">🧟</span>
+  <!-- Hidden by default -->
+  <svg>...</svg>
+  <!-- Star icon -->
+  <span class="gh-stars-count">1,234</span>
+</span>
+```
+
+For inactive repos, the zombie prefix is shown and styled with `display: inline`.
 
 ### Packaging for Distribution
 

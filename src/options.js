@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const tokenEl = document.getElementById('token');
   const ttlEl = document.getElementById('ttl');
+  const inactiveDaysEl = document.getElementById('inactive-days');
   const saveBtn = document.getElementById('save');
   // legacy status element (kept for screen-reader aria-live). We use toasts for visual feedback.
   const status = document.getElementById('status');
@@ -9,10 +10,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetBtn = document.getElementById('reset');
 
   chrome.storage.sync.get(
-    ['gh_token', 'cache_ttl_minutes', 'badges_enabled', 'debug_logging'],
+    [
+      'gh_token',
+      'cache_ttl_hours',
+      'cache_ttl_minutes',
+      'inactive_threshold_days',
+      'badges_enabled',
+      'debug_logging'
+    ],
     (items) => {
       if (items.gh_token) tokenEl.value = items.gh_token;
-      if (items.cache_ttl_minutes) ttlEl.value = items.cache_ttl_minutes;
+
+      // Handle migration from minutes to hours
+      if (items.cache_ttl_hours) {
+        ttlEl.value = items.cache_ttl_hours;
+      } else if (items.cache_ttl_minutes) {
+        // Convert old minutes setting to hours (round up)
+        ttlEl.value = Math.ceil(items.cache_ttl_minutes / 60);
+      } else {
+        ttlEl.value = 24; // default 24 hours
+      }
+
+      if (items.inactive_threshold_days) {
+        inactiveDaysEl.value = items.inactive_threshold_days;
+      } else {
+        inactiveDaysEl.value = 60; // default 60 days
+      }
+
       if (items.badges_enabled === false) {
         document.getElementById('enabled').checked = false;
       } else {
@@ -72,13 +96,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   saveBtn.addEventListener('click', () => {
     const token = tokenEl.value.trim();
-    const ttl = Math.max(1, parseInt(ttlEl.value, 10) || 60);
+    const ttl = Math.max(1, parseInt(ttlEl.value, 10) || 24);
+    const inactiveDays = Math.max(1, parseInt(inactiveDaysEl.value, 10) || 60);
     const enabled = document.getElementById('enabled').checked;
     const debug = document.getElementById('debug-logging').checked;
     chrome.storage.sync.set(
       {
         gh_token: token,
-        cache_ttl_minutes: ttl,
+        cache_ttl_hours: ttl,
+        inactive_threshold_days: inactiveDays,
         badges_enabled: enabled,
         debug_logging: debug
       },
@@ -122,14 +148,16 @@ document.addEventListener('DOMContentLoaded', () => {
     )
       return;
     tokenEl.value = '';
-    ttlEl.value = 60;
+    ttlEl.value = 24;
+    inactiveDaysEl.value = 60;
     document.getElementById('enabled').checked = true;
     // clear list
     disabledListEl.innerHTML = '';
     chrome.storage.sync.set(
       {
         gh_token: '',
-        cache_ttl_minutes: 60,
+        cache_ttl_hours: 24,
+        inactive_threshold_days: 60,
         badges_enabled: true,
         disabled_domains: []
       },

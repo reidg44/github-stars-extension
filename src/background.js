@@ -62,12 +62,25 @@ if (!ghApi) {
   };
 }
 
-const DEFAULT_TTL_MS = 1000 * 60 * 60; // fallback 1 hour
+const DEFAULT_TTL_MS = 1000 * 60 * 60 * 24; // fallback 24 hours
 
 function getTtlMsFromSettings(cb) {
-  chrome.storage.sync.get(['cache_ttl_minutes'], (items) => {
-    const mins = parseInt(items.cache_ttl_minutes, 10);
-    cb(Number.isFinite(mins) && mins > 0 ? mins * 60 * 1000 : DEFAULT_TTL_MS);
+  chrome.storage.sync.get(['cache_ttl_hours', 'cache_ttl_minutes'], (items) => {
+    let hours;
+    if (items.cache_ttl_hours) {
+      hours = parseInt(items.cache_ttl_hours, 10);
+    } else if (items.cache_ttl_minutes) {
+      // Handle migration from old minutes setting
+      const mins = parseInt(items.cache_ttl_minutes, 10);
+      hours = Number.isFinite(mins) && mins > 0 ? Math.ceil(mins / 60) : 24;
+    } else {
+      hours = 24; // default 24 hours
+    }
+    cb(
+      Number.isFinite(hours) && hours > 0
+        ? hours * 60 * 60 * 1000
+        : DEFAULT_TTL_MS
+    );
   });
 }
 
@@ -79,14 +92,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const ttlMs = await new Promise((resolve) =>
           getTtlMsFromSettings(resolve)
         );
-        const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
-        // computeInactiveFlag: returns true if `pushedAt` is more than ~30 days ago.
+
+        // Get configurable inactive threshold
+        const inactiveThresholdMs = await new Promise((resolve) => {
+          chrome.storage.sync.get(['inactive_threshold_days'], (items) => {
+            const thresholdDays = parseInt(items.inactive_threshold_days, 10);
+            const defaultMs = 60 * 24 * 60 * 60 * 1000; // 60 days in milliseconds
+            resolve(
+              Number.isFinite(thresholdDays) && thresholdDays > 0
+                ? thresholdDays * 24 * 60 * 60 * 1000
+                : defaultMs
+            );
+          });
+        });
+
+        // computeInactiveFlag: returns true if `pushedAt` is more than threshold days ago.
         const computeInactiveFlag = (pushedAt) => {
           try {
             if (!pushedAt) return false;
             const ts = Date.parse(pushedAt);
             if (Number.isNaN(ts)) return false;
-            return Date.now() - ts > ONE_MONTH_MS;
+            return Date.now() - ts > inactiveThresholdMs;
           } catch (e) {
             return false;
           }

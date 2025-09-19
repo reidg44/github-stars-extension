@@ -144,8 +144,10 @@
       if (!pushed) return false;
       const ts = typeof pushed === 'number' ? pushed : Date.parse(pushed);
       if (Number.isNaN(ts)) return false;
-      const ONE_MONTH_MS = 1000 * 60 * 60 * 24 * 30; // ~30 days
-      return Date.now() - ts > ONE_MONTH_MS;
+      const DEFAULT_INACTIVE_THRESHOLD_DAYS = 60;
+      const INACTIVE_THRESHOLD_MS =
+        1000 * 60 * 60 * 24 * DEFAULT_INACTIVE_THRESHOLD_DAYS;
+      return Date.now() - ts > INACTIVE_THRESHOLD_MS;
     } catch (e) {
       return false;
     }
@@ -221,7 +223,7 @@
               zombiePrefix.textContent = '🧟';
               zombiePrefix.style.display = 'inline';
               txt.textContent = countText;
-              span.title = `Last pushed more than 30 days ago. Pushed: ${
+              span.title = `Repository marked as inactive (not pushed recently). Pushed: ${
                 response.pushed_at
                   ? new Date(response.pushed_at).toLocaleString()
                   : 'Unknown'

@@ -67,8 +67,14 @@
     <p style="font-size:85%;color:#666;margin-top:6px">Note: the token is stored in <code>chrome.storage.sync</code> for
         convenience — treat it like a password.</p>
 
-    <label>Cache TTL (minutes)</label>
-    <input id="ttl" type="number" min="1" value="60" />
+    <label>Cache TTL (hours)</label>
+    <input id="ttl" type="number" min="1" value="24" />
+
+    <label>Inactive threshold (days)</label>
+    <input id="inactive-days" type="number" min="1" value="60" />
+    <p style="font-size:85%;color:#666;margin-top:2px">Repositories that haven't been pushed to in this many days will
+        be marked as inactive.</p>
+
     <label><input id="enabled" type="checkbox" /> Enable inline GitHub star badges</label>
     <label><input id="debug-logging" type="checkbox" /> Enable debug logging</label>
 

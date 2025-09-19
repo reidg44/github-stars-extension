@@ -1,6 +1,25 @@
 # GitHub Stars Chrome Extension
 A Chrome extension that displays the number of stars for a GitHub repository directly next to a link to the repository on the page.
 
+## Features
+
+The extension shows different badge types based on repository status:
+
+- **Active repositories**: ⭐ {count} - Show star icon with count
+- **Inactive repositories**: 🧟 ⭐ {count} - Show zombie emoji + star icon + count (not pushed to in 30+ days)
+- **Archived repositories**: 🪦 - Show gravestone emoji only
+- **Missing repositories**: 🚫 - Show banned emoji only
+
+**Note**: Inactive detection is based on `pushed_at` (last code push) rather than `updated_at` (general activity like stars/issues) to focus on actual development activity.
+
+## Recent Updates
+
+- **v0.1.0 (Sept 2025)**:
+  - Improved inactive repository detection using `pushed_at` timestamps instead of `updated_at` for more accurate assessment of code activity
+  - Updated badge visual hierarchy so zombie emoji appears before star icon
+  - Changed cache TTL from minutes to hours with 24-hour default
+  - Added configurable inactive threshold (60 days default) instead of hardcoded 30 days
+
 ## Scaffold
 
 This repository contains a minimal scaffold for a Manifest V3 Chrome extension. Files added:
@@ -106,9 +125,10 @@ Run the unit tests and E2E tests locally after install as shown above.
 
 ## Options & Token
 
-Open the extension Options page (via the action menu or `chrome://extensions` -> Details -> Options) to:
+Open the extension Options page (via the action menu or `chrome://extensions` → Details → Options) to:
 - Paste a GitHub Personal Access Token (PAT) to increase API rate limits (optional). Create one at https://github.com/settings/tokens with `public_repo` scope.
-- Set the cache TTL in minutes.
+- Set the cache TTL in hours (default: 24 hours).
+- Configure the inactive threshold in days (default: 60 days) - repositories that haven't been pushed to in this many days will show the zombie emoji.
 - Enable/disable inline badges and add per-domain opt-outs.
 
 Security note: the PAT is stored in `chrome.storage.sync` for convenience — treat it like a password and revoke it if exposed.
@@ -135,4 +155,3 @@ Example (from repository root):
 - If badges do not appear on a page, check the Options page that badges are enabled and the current site is not in the opt-out list.
 - If the background script fails to load in Chrome MV3, ensure `dist/background.js` exists (run `npm run build`).
 - If tests fail, run `npm install` to ensure dev dependencies are present and then `npm test` again.
-
