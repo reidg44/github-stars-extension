@@ -31,7 +31,11 @@ const EXCLUDED_GITHUB_PATHS = [
   'join',
   'apps/',
   'oauth/',
-  'search'
+  'search',
+  'in-product-messaging/',
+  'account/',
+  'site/',
+  'codespaces/'
 ];
 
 function extractRepoFromUrl(url) {

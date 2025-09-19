@@ -193,7 +193,11 @@ test('E2E: excluded GitHub URLs do not get parsed as repos', async ({
           'join',
           'apps/',
           'oauth/',
-          'search'
+          'search',
+          'in-product-messaging/',
+          'account/',
+          'site/',
+          'codespaces/'
         ];
 
         // Check if path should be excluded
@@ -227,7 +231,7 @@ test('E2E: excluded GitHub URLs do not get parsed as repos', async ({
   );
 
   // We should have significantly fewer processed repos than total GitHub anchors
-  // The test page has 6 real repo links + 14 excluded URLs = 20 total
+  // The test page has 6 real repo links + 18 excluded URLs = 24 total
   // Only the 6 real repo links should be processed
   expect(processedRepos).toBeLessThan(totalAnchors);
   expect(processedRepos).toBe(6); // Only the real repo links should be processed

@@ -49,7 +49,11 @@
     'join',
     'apps/',
     'oauth/',
-    'search'
+    'search',
+    'in-product-messaging/',
+    'account/',
+    'site/',
+    'codespaces/'
   ];
 
   function parseUrl(href) {
