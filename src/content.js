@@ -54,7 +54,8 @@
     'account/',
     'site/',
     'codespaces/',
-    'git-guides'
+    'git-guides',
+    'mcp/'
   ];
 
   function parseUrl(href) {
