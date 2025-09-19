@@ -53,7 +53,8 @@
     'in-product-messaging/',
     'account/',
     'site/',
-    'codespaces/'
+    'codespaces/',
+    'git-guides'
   ];
 
   function parseUrl(href) {
