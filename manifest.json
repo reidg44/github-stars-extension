@@ -1,26 +1,44 @@
 {
-  "manifest_version": 3,
-  "name": "GitHub Stars Inline Badges",
-  "version": "0.1.0",
-  "description": "Show GitHub star counts next to GitHub repo links on any page.",
-  "permissions": ["storage", "scripting", "tabs"],
-  "host_permissions": ["https://api.github.com/*"],
+  "action": {
+    "default_title": "GitHub Stars"
+  },
   "background": {
     "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.js"],
-      "css": ["src/styles/badge.css"],
+      "css": [
+        "src/styles/badge.css"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
       "run_at": "document_idle"
     }
   ],
-  "options_ui": {
-    "page": "src/options.html",
-    "open_in_tab": true
+  "description": "Show GitHub star counts next to GitHub repo links on any page.",
+  "host_permissions": [
+    "https://api.github.com/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
   },
-  "action": {
-    "default_title": "GitHub Stars"
-  }
+  "manifest_version": 3,
+  "name": "GitHub Stars Inline Badges",
+  "options_ui": {
+    "open_in_tab": true,
+    "page": "src/options.html"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "tabs"
+  ],
+  "version": "0.1.0"
 }

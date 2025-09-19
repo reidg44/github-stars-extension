@@ -1,6 +1,8 @@
 # GitHub Stars Chrome Extension
 A Chrome extension that displays the number of stars for a GitHub repository directly next to a link to the repository on the page.
 
+Vibe coded with GitHub Copilot and Claude Sonnet.
+
 ## Features
 
 The extension shows different badge types based on repository status:
