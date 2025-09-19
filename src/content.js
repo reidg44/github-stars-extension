@@ -19,11 +19,64 @@
     'i'
   );
 
+  // GitHub paths that are NOT repository links (easy to extend)
+  const EXCLUDED_GITHUB_PATHS = [
+    'topics/',
+    'contact/',
+    'orgs/',
+    'settings/',
+    'notifications/',
+    'explore/',
+    'marketplace/',
+    'pricing/',
+    'features/',
+    'enterprise/',
+    'security/',
+    'sponsors/',
+    'about/',
+    'blog/',
+    'developer/',
+    'support/',
+    'community/',
+    'events/',
+    'collections/',
+    'discussions/',
+    'new/',
+    'organizations/',
+    'login',
+    'logout',
+    'signup',
+    'join',
+    'apps/',
+    'oauth/',
+    'search'
+  ];
+
   function parseUrl(href) {
     if (extractRepoFromUrl) {
       const res = extractRepoFromUrl(href);
       if (res) return res;
     }
+
+    // Check if this is an excluded GitHub path
+    try {
+      const url = new URL(href);
+      if (url.hostname.toLowerCase().includes('github.com')) {
+        const path = url.pathname.toLowerCase();
+        // Remove leading slash for comparison
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+
+        // Check if the path starts with any excluded prefix
+        for (const excludedPath of EXCLUDED_GITHUB_PATHS) {
+          if (cleanPath.startsWith(excludedPath.toLowerCase())) {
+            return null; // This is not a repo link
+          }
+        }
+      }
+    } catch (e) {
+      // If URL parsing fails, continue with regex fallback
+    }
+
     const m = href.match(FALLBACK_REGEX);
     if (!m) return null;
     return { owner: m[1], repo: m[2] };

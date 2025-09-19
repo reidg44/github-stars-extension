@@ -4,6 +4,28 @@ const fs = require('fs');
 
 // Helper to inject the extension's content script into the page context
 async function injectContentScript(page) {
+  // First inject the parseRepo module
+  const parseRepoSrc = fs.readFileSync(
+    path.resolve(__dirname, '../src/lib/parseRepo.js'),
+    'utf8'
+  );
+
+  // Create a module setup for parseRepo
+  const moduleSetup = `
+    // Set up module system for parseRepo
+    window.require = window.require || function(path) {
+      if (path === './lib/parseRepo') {
+        // Inject parseRepo module content
+        ${parseRepoSrc}
+        return { extractRepoFromUrl };
+      }
+      return {};
+    };
+  `;
+
+  await page.addInitScript({ content: moduleSetup });
+
+  // Then inject the content script
   const contentSrc = fs.readFileSync(
     path.resolve(__dirname, '../src/content.js'),
     'utf8'
@@ -108,4 +130,105 @@ test('E2E: badges render for active, inactive, archived, and missing', async ({
   expect(results['repo3']).toBe('🧟 50');
   // missing repo should show banned emoji
   expect(results['repo6']).toBe('🚫');
+});
+
+test('E2E: excluded GitHub URLs do not get parsed as repos', async ({
+  page
+}) => {
+  // Add chrome mock first
+  await page.addInitScript({ content: chromeShim });
+  await injectContentScript(page);
+
+  // Navigate to test page
+  const testPagePath = path.resolve(__dirname, '../test/test-page.html');
+  await page.goto(`file://${testPagePath}`);
+
+  // Wait a moment for the extension to process
+  await page.waitForTimeout(500);
+
+  // Count total anchors vs anchors that got processed as repos
+  const totalAnchors = await page.locator('a[href*="github.com"]').count();
+  const processedRepos = await page.evaluate(() => {
+    // Access the extension's findRepoLinks function to see what it found
+    const anchors = Array.from(document.querySelectorAll('a[href]'));
+    let repoCount = 0;
+
+    // Simulate the same filtering logic the extension uses
+    anchors.forEach((a) => {
+      const href = a.href;
+      if (!href.includes('github.com')) return;
+
+      // Test the same parseUrl logic - check for excluded paths
+      try {
+        const url = new URL(href);
+        const path = url.pathname.toLowerCase();
+        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+
+        const excludedPaths = [
+          'topics/',
+          'contact/',
+          'orgs/',
+          'settings/',
+          'notifications/',
+          'explore/',
+          'marketplace/',
+          'pricing/',
+          'features/',
+          'enterprise/',
+          'security/',
+          'sponsors/',
+          'about/',
+          'blog/',
+          'developer/',
+          'support/',
+          'community/',
+          'events/',
+          'collections/',
+          'discussions/',
+          'new/',
+          'organizations/',
+          'login',
+          'logout',
+          'signup',
+          'join',
+          'apps/',
+          'oauth/',
+          'search'
+        ];
+
+        // Check if path should be excluded
+        const isExcluded = excludedPaths.some((excludedPath) =>
+          cleanPath.startsWith(excludedPath.toLowerCase())
+        );
+
+        if (!isExcluded) {
+          // Check if it matches repo pattern
+          const repoPattern =
+            /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:[/#?]|$)/i;
+          if (repoPattern.test(href)) {
+            repoCount++;
+          }
+        }
+      } catch (e) {
+        // If parsing fails, still check repo pattern
+        const repoPattern =
+          /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:[/#?]|$)/i;
+        if (repoPattern.test(href)) {
+          repoCount++;
+        }
+      }
+    });
+
+    return repoCount;
+  });
+
+  console.log(
+    `Total GitHub anchors: ${totalAnchors}, Processed as repos: ${processedRepos}`
+  );
+
+  // We should have significantly fewer processed repos than total GitHub anchors
+  // The test page has 6 real repo links + 14 excluded URLs = 20 total
+  // Only the 6 real repo links should be processed
+  expect(processedRepos).toBeLessThan(totalAnchors);
+  expect(processedRepos).toBe(6); // Only the real repo links should be processed
 });

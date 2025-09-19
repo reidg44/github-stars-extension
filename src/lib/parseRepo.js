@@ -1,6 +1,39 @@
 // parseRepo.js
 // Exports a single function extractRepoFromUrl(url) -> { owner, repo } | null
 
+// GitHub paths that are NOT repository links (easy to extend)
+const EXCLUDED_GITHUB_PATHS = [
+  'topics/',
+  'contact/',
+  'orgs/',
+  'settings/',
+  'notifications/',
+  'explore/',
+  'marketplace/',
+  'pricing/',
+  'features/',
+  'enterprise/',
+  'security/',
+  'sponsors/',
+  'about/',
+  'blog/',
+  'developer/',
+  'support/',
+  'community/',
+  'events/',
+  'collections/',
+  'discussions/',
+  'new/',
+  'organizations/',
+  'login',
+  'logout',
+  'signup',
+  'join',
+  'apps/',
+  'oauth/',
+  'search'
+];
+
 function extractRepoFromUrl(url) {
   if (!url || typeof url !== 'string') return null;
   try {
@@ -8,6 +41,18 @@ function extractRepoFromUrl(url) {
     // Only care about github.com host (allow subdomains like www)
     const host = u.hostname.toLowerCase();
     if (!host.endsWith('github.com')) return null;
+
+    // Check if this is an excluded GitHub path
+    const path = u.pathname.toLowerCase();
+    // Remove leading slash for comparison
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+
+    // Check if the path starts with any excluded prefix
+    for (const excludedPath of EXCLUDED_GITHUB_PATHS) {
+      if (cleanPath.startsWith(excludedPath.toLowerCase())) {
+        return null; // This is not a repo link
+      }
+    }
 
     // Path segments: /owner/repo/...
     const parts = u.pathname.split('/').filter(Boolean);

@@ -99,6 +99,21 @@ chrome.runtime.sendMessage({ type: 'GET_STARS', owner, repo }, callback);
 
 **Note**: The `inactive` flag is computed by the background script using the user-configurable inactive threshold (default 60 days) and `pushed_at` timestamp.
 
+## URL Filtering & Link Detection
+
+**GitHub path exclusions** prevent false positives for non-repository URLs:
+
+- **Excluded paths**: `topics/`, `contact/`, `orgs/`, `settings/`, `explore/`, `marketplace/`, etc.
+- **Filter location**: `parseUrl()` function in `src/content.js`
+- **Easy extension**: Add new paths to `EXCLUDED_GITHUB_PATHS` array
+- **Logic**: Checks URL pathname against excluded prefixes before treating as repo link
+
+Example excluded URLs:
+
+- `https://github.com/topics/javascript` → Not treated as repo
+- `https://github.com/orgs/microsoft` → Not treated as repo
+- `https://github.com/microsoft/vscode` → Treated as repo (`microsoft/vscode`)
+
 ## Badge State Visual Patterns
 
 - **Active repo**: ⭐ {count} (yellow star + number)
