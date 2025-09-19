@@ -1,159 +1,213 @@
-# GitHub Stars Chrome Extension
-A Chrome extension that displays the number of stars for a GitHub repository directly next to a link to the repository on the page.
+# GitHub Stars Extension
+> See GitHub repository star counts instantly on any webpage
 
-Vibe coded with GitHub Copilot and Claude Sonnet.
+Never wonder if a GitHub repository is popular again! This Chrome extension automatically shows star counts as badges next to GitHub repository links wherever you browse the web.
 
-## Features
+## ✨ What it does
 
-The extension shows different badge types based on repository status:
+When you visit any webpage that mentions GitHub repositories, you'll instantly see how popular each repo is without having to click through to GitHub. Perfect for:
 
-- **Active repositories**: ⭐ {count} - Show star icon with count
-- **Inactive repositories**: 🧟 ⭐ {count} - Show zombie emoji + star icon + count (not pushed to in 30+ days)
-- **Archived repositories**: 🪦 - Show gravestone emoji only
-- **Missing repositories**: 🚫 - Show banned emoji only
+- 📚 Reading documentation with repo links
+- 🔍 Browsing awesome lists and curated collections  
+- 📰 Following tech news and blog posts
+- 💼 Evaluating tools and libraries for your projects
 
-**Note**: Inactive detection is based on `pushed_at` (last code push) rather than `updated_at` (general activity like stars/issues) to focus on actual development activity.
+## 🚀 Quick Start
 
-## Recent Updates
+### 1. Install the Extension
+1. Download or clone this repository
+2. Open Chrome and go to `chrome://extensions`
+3. Enable "Developer mode" (toggle in top-right)
+4. Click "Load unpacked" and select the repository folder
+5. Done! The extension is now active
 
-- **v0.1.0 (Sept 2025)**:
-  - Improved inactive repository detection using `pushed_at` timestamps instead of `updated_at` for more accurate assessment of code activity
-  - Updated badge visual hierarchy so zombie emoji appears before star icon
-  - Changed cache TTL from minutes to hours with 24-hour default
-  - Added configurable inactive threshold (60 days default) instead of hardcoded 30 days
+### 2. Add your GitHub Token (Required for practical use)
+**Important**: While the extension works without a token, GitHub's API only allows 60 requests per hour for unauthenticated users. You'll quickly hit rate limits with normal browsing.
 
-## Scaffold
+1. Right-click the extension icon → "Options"
+2. Visit [github.com/settings/tokens](https://github.com/settings/tokens) → "Generate new token"
+3. Select `public_repo` scope (read access to public repositories)
+4. Copy the token and paste it in the extension options
+5. Click "Save"
 
-This repository contains a minimal scaffold for a Manifest V3 Chrome extension. Files added:
+**With a token**: 5,000 requests per hour (enough for heavy browsing)  
+**Without a token**: 60 requests per hour (you'll see rate limit errors quickly)
 
-- `manifest.json` - extension manifest (MV3)
-- `src/content.js` - content script that finds GitHub repo links and injects badges
-- `src/background.js` - background service worker that fetches GitHub API and caches results
-- `src/options.html` / `src/options.js` - options page to set a GitHub token and cache TTL
-- `package.json`, `.gitignore`, `icons/`
+### 3. See it in action
+Visit any webpage with GitHub links and watch the magic happen! Star counts appear automatically as badges next to repository links.
 
-You can enable or disable inline badges via the extension Options page.
+## 🏷️ What the badges mean
 
-## How to load (developer)
+The extension shows different badges based on repository status:
 
-1. Open Chrome and go to chrome://extensions
-2. Enable "Developer mode"
-3. Click "Load unpacked" and choose this repository's root folder
+| Badge   | Meaning                                                            | Example                         |
+| ------- | ------------------------------------------------------------------ | ------------------------------- |
+| ⭐ 1,234 | **Active repository** - Recently updated with development activity | Popular, maintained project     |
+| 🧟 ⭐ 856 | **Inactive repository** - No code pushes in 60+ days               | Might be abandoned or complete  |
+| 🪦       | **Archived repository** - Officially archived by maintainers       | Read-only, no longer maintained |
+| 🚫       | **Repository not found** - Private, deleted, or moved              | Link may be broken              |
 
-The extension will inject small star badges next to GitHub repo links on pages.
+*Note: "Inactive" is based on actual code pushes, not general activity like stars or issues.*
 
-## Next steps
+## ⚙️ Additional Configuration
 
-- Implement more robust URL parsing and unit tests
-- Add caching TTL configurable via options
-- Improve badge styling and accessibility
+Right-click the extension icon and select "Options" to customize:
 
-## Build
+### GitHub Personal Access Token (Required)
+✅ **Already set up?** You configured this in the Quick Start above.
 
-This project uses `esbuild` to bundle the background service worker so it works in Manifest V3.
+**Token Details:**
+- **Purpose**: Access GitHub's API to fetch repository information
+- **Scope needed**: `public_repo` (read access to public repositories only)
+- **Security**: Stored locally in Chrome's secure storage, never transmitted to third parties
+- **Rate limits**: 5,000 API calls per hour (vs. 60 without a token)
 
-- Build (bundles `src/background.js` to `dist/background.js`):
+### Other Settings
+- **Cache duration**: How long to remember star counts (default: 24 hours)
+- **Inactive threshold**: Days before marking repos as inactive (default: 60 days)
+- **Domain exclusions**: Disable badges on specific websites
+- **Toggle badges**: Turn the extension on/off globally
 
-	npm run build
+## 🔒 Privacy & Security
 
-Make sure you run the build before loading the extension if you've edited background source files.
+- **No data collection**: The extension doesn't track your browsing or send data anywhere
+- **Local storage only**: All settings and cached data stay on your device
+- **GitHub token security**: Only used for API access, stored securely in Chrome's sync storage, never shared with third parties
+- **Open source**: You can review all the code in this repository
 
-## Testing
+## 🐛 Troubleshooting
 
-This project includes:
-- Unit/integration tests with Jest (some tests run in a jsdom environment).
-- An end-to-end (E2E) smoke test implemented with Playwright that loads `test/test-page.html`, injects a small `chrome` shim and the extension's `src/content.js`, and verifies the badges for Active / Inactive / Archived / Missing cases.
+### Badges not appearing?
+- **Most common**: Make sure you've added a GitHub token (see Quick Start step 2)
+- Check that the extension is enabled in `chrome://extensions`
+- Verify the website isn't in your excluded domains list (Extension Options)
+- Make sure the links are actually GitHub repository URLs
 
-Unit tests (Jest)
+### Seeing rate limit errors?
+- **You need a GitHub token!** Without one, you only get 60 API requests per hour
+- Follow step 2 in the Quick Start guide above to add your token
+- With a token, you get 5,000 requests per hour
 
-- Install dev dependencies (if not already):
+### Extension not loading?
+- Run `npm run build` in the repository folder first
+- Make sure you selected the correct folder when loading unpacked
+- Check the Chrome extension console for error messages
 
+## 📸 Screenshots
+
+*[Screenshots will be added here showing the extension in action on various websites]*
+
+---
+
+## 🛠️ For Developers
+
+*The sections below contain technical information for developers who want to modify, test, or contribute to the extension.*
+
+### Development Setup
+
+This extension uses `esbuild` to bundle the background service worker for Manifest V3 compatibility.
+
+**Prerequisites:**
 ```bash
 npm install
 ```
 
-- Run the unit tests:
+**Build the extension:**
+```bash
+npm run build
+```
+*This bundles `src/background.js` to `dist/background.js`. Run this before loading the extension if you've modified background script files.*
 
+**Load for development:**
+1. Run `npm run build` to create the bundled background script
+2. Open Chrome → `chrome://extensions`
+3. Enable "Developer mode" (top-right toggle)
+4. Click "Load unpacked" → Select the repository root folder
+5. The extension loads immediately
+
+### Architecture
+
+This is a **Manifest V3 Chrome extension** with these key components:
+
+- **Content Script** (`src/content.js`): Scans pages for GitHub links, injects badge placeholders
+- **Background Service Worker** (`dist/background.js`): Handles GitHub API calls and caching  
+- **Options Page** (`src/options.html/js`): User configuration interface
+- **Modular Library** (`src/lib/`): Reusable modules for URL parsing, caching, API calls
+
+### Testing
+
+**Unit Tests (Jest):**
 ```bash
 npm test
 ```
 
-E2E tests (Playwright)
-
-The E2E tests are under the `e2e/` folder and are configured by the root `playwright.config.js` (Playwright will run tests in `e2e/` by default).
-
-- Install Playwright test runner and browsers:
-
+**End-to-End Tests (Playwright):**
 ```bash
-npm install -D playwright @playwright/test
+# Install Playwright (first time only)
 npx playwright install
-```
 
-- Run the E2E tests:
-
-```bash
+# Run E2E tests
 npm run test:e2e
-```
 
-- View HTML report for the last run:
-
-```bash
+# View test reports
 npx playwright show-report
 ```
 
-Troubleshooting & notes
+The E2E tests load a test page (`test/test-page.html`) and verify badge injection for different repository states.
 
-- Single Playwright config: this repo uses the root `playwright.config.js` to avoid accidental discovery of unit tests under `test/` by Playwright. A duplicate `e2e/playwright.config.js` was removed to prevent conflicting configs.
-- Playwright `addInitScript` usage: Playwright requires `page.addInitScript({ content: '...' })` or `page.addInitScript({ path: '/abs/path/to/file.js' })`. If you see errors like "Either path or content property must be present", change any `{ script: ... }` calls to `{ content: ... }`.
-- MutationObserver errors in tests: some earlier runs injected the content script before `document.body` existed which caused `MutationObserver.observe` to throw. The content script now waits for DOMContentLoaded and guards `observe()` so the tests won't fail with "parameter 1 is not of type 'Node'".
-- Missing GitHub token warning: when running tests you may see a console warning "GitHub token not present..." — this is expected unless you've configured a PAT in the extension options. The tests mock `chrome` APIs to avoid real network usage.
-- If Playwright tries to run Jest tests (you'll see ReferenceError: beforeEach/test is not defined), ensure Playwright's `testDir` points to `e2e/` (see root `playwright.config.js`).
+### File Structure
 
-If you change the content script or background code, rebuild the background bundle for MV3 using:
-
-```bash
-npm run build
+```
+├── manifest.json           # Extension manifest (MV3)
+├── src/
+│   ├── content.js          # Content script (badge injection)
+│   ├── background.js       # Service worker (API calls)
+│   ├── options.html/js     # Configuration interface
+│   ├── lib/                # Shared modules
+│   └── styles/badge.css    # Badge styling
+├── dist/
+│   └── background.js       # Bundled service worker
+├── test/                   # Unit tests
+├── e2e/                    # End-to-end tests
+└── icons/                  # Extension icons
 ```
 
-Run the unit tests and E2E tests locally after install as shown above.
+### Packaging for Distribution
 
-## Loading in Chrome (unpacked)
+Create a production-ready zip file:
 
-1. Run `npm run build` to produce `dist/background.js`.
-2. Open Chrome and navigate to `chrome://extensions`.
-3. Enable "Developer mode" (top-right).
-4. Click "Load unpacked" and select the repository root (or the folder containing `manifest.json`).
-5. The extension will be loaded; use the toolbar action to open the options page or right-click a page and inspect injected badges.
+```bash
+npm run package
+```
 
-## Options & Token
+This creates `github-stars-extension.zip` containing only the necessary files for Chrome Web Store submission (excludes tests, node_modules, and development files).
 
-Open the extension Options page (via the action menu or `chrome://extensions` → Details → Options) to:
-- Paste a GitHub Personal Access Token (PAT) to increase API rate limits (optional). Create one at https://github.com/settings/tokens with `public_repo` scope.
-- Set the cache TTL in hours (default: 24 hours).
-- Configure the inactive threshold in days (default: 60 days) - repositories that haven't been pushed to in this many days will show the zombie emoji.
-- Enable/disable inline badges and add per-domain opt-outs.
+### Contributing
 
-Security note: the PAT is stored in `chrome.storage.sync` for convenience — treat it like a password and revoke it if exposed.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `npm test && npm run test:e2e`
+5. Build: `npm run build`
+6. Test the extension by loading it unpacked
+7. Submit a pull request
 
-## Packaging for Chrome Web Store
+### Recent Updates
 
-To prepare a zip for upload (manually):
+- **v0.1.0 (Sept 2025)**:
+  - Added GitHub token masking in options page for better security
+  - Improved inactive repository detection using `pushed_at` timestamps
+  - Changed cache TTL from minutes to hours (24-hour default)
+  - Made inactive threshold configurable (60 days default)
+  - Enhanced badge visual hierarchy with zombie emoji before star icon
 
-1. Run `npm run build`.
-2. Create a zip archive containing `manifest.json`, `dist/`, `src/styles/`, `src/options.html`, `src/options.js`, and any icons/resources. Do NOT include tests, node_modules, or dev files.
+### Troubleshooting Development Issues
 
-Example (from repository root):
+- **Background script won't load**: Ensure `dist/background.js` exists by running `npm run build`
+- **Tests failing**: Run `npm install` to ensure all dev dependencies are installed
+- **Extension not updating**: Click the refresh icon for your extension in `chrome://extensions`
+- **API rate limits during development**: Add a GitHub token in the extension options
 
-	zip -r github-stars.zip manifest.json dist src/styles src/options.html src/options.js icons
+---
 
-	Or use the included npm script which runs the build and creates a zip in the repo root:
-
-		npm run package
-
-	This will produce `github-stars-extension.zip` containing the minified/bundled background and the files needed for distribution.
-
-## Troubleshooting
-
-- If badges do not appear on a page, check the Options page that badges are enabled and the current site is not in the opt-out list.
-- If the background script fails to load in Chrome MV3, ensure `dist/background.js` exists (run `npm run build`).
-- If tests fail, run `npm install` to ensure dev dependencies are present and then `npm test` again.
+*Built with ❤️ using GitHub Copilot and Claude Sonnet*

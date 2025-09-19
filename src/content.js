@@ -55,7 +55,11 @@
     'site/',
     'codespaces/',
     'git-guides',
-    'mcp/'
+    'mcp/',
+    'stars/',
+    'trending',
+    'watching',
+    'followers'
   ];
 
   function parseUrl(href) {
