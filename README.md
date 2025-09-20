@@ -8,7 +8,7 @@ Never wonder if a GitHub repository is popular again! This Chrome extension auto
 When you visit any webpage that mentions GitHub repositories, you'll instantly see how popular each repo is without having to click through to GitHub. Perfect for:
 
 - 📚 Reading documentation with repo links
-- 🔍 Browsing awesome lists and curated collections  
+- 🔍 Browsing awesome lists and curated collections
 - 📰 Following tech news and blog posts
 - 💼 Evaluating tools and libraries for your projects
 
@@ -30,7 +30,7 @@ When you visit any webpage that mentions GitHub repositories, you'll instantly s
 4. Copy the token and paste it in the extension options
 5. Click "Save"
 
-**With a token**: 5,000 requests per hour (enough for heavy browsing)  
+**With a token**: 5,000 requests per hour (enough for heavy browsing)
 **Without a token**: 60 requests per hour (you'll see rate limit errors quickly)
 
 ### 3. See it in action
@@ -95,7 +95,7 @@ Right-click the extension icon and select "Options" to customize:
 
 ## 📸 Screenshots
 
-*[Screenshots will be added here showing the extension in action on various websites]*
+![Screenshot 1](docs/screenshot1.png)
 
 ---
 
@@ -130,7 +130,7 @@ npm run build
 This is a **Manifest V3 Chrome extension** with these key components:
 
 - **Content Script** (`src/content.js`): Scans pages for GitHub links, injects badge placeholders
-- **Background Service Worker** (`dist/background.js`): Handles GitHub API calls and caching  
+- **Background Service Worker** (`dist/background.js`): Handles GitHub API calls and caching
 - **Options Page** (`src/options.html/js`): User configuration interface
 - **Modular Library** (`src/lib/`): Reusable modules for URL parsing, caching, API calls
 
