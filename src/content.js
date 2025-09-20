@@ -59,7 +59,8 @@
     'stars/',
     'trending',
     'watching',
-    'followers'
+    'followers',
+    'users/'
   ];
 
   function parseUrl(href) {
