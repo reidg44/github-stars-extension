@@ -63,6 +63,9 @@
     'users/'
   ];
 
+  // GitHub path patterns that can appear anywhere in the path (not just at the start)
+  const EXCLUDED_GITHUB_PATTERNS = ['.github-private'];
+
   function parseUrl(href) {
     if (extractRepoFromUrl) {
       const res = extractRepoFromUrl(href);
@@ -80,6 +83,13 @@
         // Check if the path starts with any excluded prefix
         for (const excludedPath of EXCLUDED_GITHUB_PATHS) {
           if (cleanPath.startsWith(excludedPath.toLowerCase())) {
+            return null; // This is not a repo link
+          }
+        }
+
+        // Check if the path contains any excluded patterns
+        for (const excludedPattern of EXCLUDED_GITHUB_PATTERNS) {
+          if (cleanPath.includes(excludedPattern.toLowerCase())) {
             return null; // This is not a repo link
           }
         }
