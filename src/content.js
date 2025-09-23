@@ -38,6 +38,7 @@
     'features/',
     'followers',
     'git-guides',
+    'github-copilot/',
     'in-product-messaging/',
     'join',
     'login',
