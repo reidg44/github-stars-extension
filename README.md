@@ -1,4 +1,5 @@
 # GitHub Stars Extension
+>
 > See GitHub repository star counts instantly on any webpage
 
 Never wonder if a GitHub repository is popular again! This Chrome extension automatically shows star counts as badges next to GitHub repository links wherever you browse the web.
@@ -15,6 +16,7 @@ When you visit any webpage that mentions GitHub repositories, you'll instantly s
 ## 🚀 Quick Start
 
 ### 1. Install the Extension
+
 1. Download or clone this repository
 2. Open Chrome and go to `chrome://extensions`
 3. Enable "Developer mode" (toggle in top-right)
@@ -22,6 +24,7 @@ When you visit any webpage that mentions GitHub repositories, you'll instantly s
 5. Done! The extension is now active
 
 ### 2. Add your GitHub Token (Required for practical use)
+
 **Important**: While the extension works without a token, GitHub's API only allows 60 requests per hour for unauthenticated users. You'll quickly hit rate limits with normal browsing.
 
 1. Right-click the extension icon → "Options"
@@ -34,6 +37,7 @@ When you visit any webpage that mentions GitHub repositories, you'll instantly s
 **Without a token**: 60 requests per hour (you'll see rate limit errors quickly)
 
 ### 3. See it in action
+
 Visit any webpage with GitHub links and watch the magic happen! Star counts appear automatically as badges next to repository links.
 
 ## 🏷️ What the badges mean
@@ -54,15 +58,18 @@ The extension shows different badges based on repository status:
 Right-click the extension icon and select "Options" to customize:
 
 ### GitHub Personal Access Token (Required)
+
 ✅ **Already set up?** You configured this in the Quick Start above.
 
 **Token Details:**
+
 - **Purpose**: Access GitHub's API to fetch repository information
 - **Scope needed**: `public_repo` (read access to public repositories only)
 - **Security**: Stored locally in Chrome's secure storage, never transmitted to third parties
 - **Rate limits**: 5,000 API calls per hour (vs. 60 without a token)
 
 ### Other Settings
+
 - **Cache duration**: How long to remember star counts (default: 24 hours)
 - **Inactive threshold**: Days before marking repos as inactive (default: 60 days)
 - **Domain exclusions**: Disable badges on specific websites
@@ -78,17 +85,20 @@ Right-click the extension icon and select "Options" to customize:
 ## 🐛 Troubleshooting
 
 ### Badges not appearing?
+
 - **Most common**: Make sure you've added a GitHub token (see Quick Start step 2)
 - Check that the extension is enabled in `chrome://extensions`
 - Verify the website isn't in your excluded domains list (Extension Options)
 - Make sure the links are actually GitHub repository URLs
 
 ### Seeing rate limit errors?
+
 - **You need a GitHub token!** Without one, you only get 60 API requests per hour
 - Follow step 2 in the Quick Start guide above to add your token
 - With a token, you get 5,000 requests per hour
 
 ### Extension not loading?
+
 - Run `npm run build` in the repository folder first
 - Make sure you selected the correct folder when loading unpacked
 - Check the Chrome extension console for error messages
@@ -108,17 +118,21 @@ Right-click the extension icon and select "Options" to customize:
 This extension uses `esbuild` to bundle the background service worker for Manifest V3 compatibility.
 
 **Prerequisites:**
+
 ```bash
 npm install
 ```
 
 **Build the extension:**
+
 ```bash
 npm run build
 ```
+
 *This bundles `src/background.js` to `dist/background.js`. Run this before loading the extension if you've modified background script files.*
 
 **Load for development:**
+
 1. Run `npm run build` to create the bundled background script
 2. Open Chrome → `chrome://extensions`
 3. Enable "Developer mode" (top-right toggle)
@@ -137,11 +151,13 @@ This is a **Manifest V3 Chrome extension** with these key components:
 ### Testing
 
 **Unit Tests (Jest):**
+
 ```bash
 npm test
 ```
 
 **End-to-End Tests (Playwright):**
+
 ```bash
 # Install Playwright (first time only)
 npx playwright install

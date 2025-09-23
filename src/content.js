@@ -51,6 +51,7 @@
     'organizations/',
     'orgs/',
     'pricing/',
+    'readme/',
     'search',
     'security/',
     'settings/',
@@ -79,7 +80,9 @@
     // Example: 'https://example.com/private-docs',
     // Example: 'https://internal.company.com/wiki',
     'https://github.com/orgs/',
-    'https://github.com/settings/'
+    'https://github.com/settings/',
+    'https://google.com/search',
+    'https://www.google.com/complete/search'
   ];
 
   function parseUrl(href) {
@@ -242,6 +245,35 @@
     span.appendChild(zombiePrefix);
     span.appendChild(svg);
     span.appendChild(txt);
+
+    // Check if any parent element has scaleY(-1) transform that would flip our badge
+    // If so, apply counter-transform to fix it
+    setTimeout(() => {
+      let element = span.parentElement;
+      let hasInvertingTransform = false;
+
+      while (element && element !== document.body) {
+        const style = window.getComputedStyle(element);
+        const transform = style.transform;
+
+        // Check if transform contains scaleY(-1) or matrix with negative Y scale
+        if (transform && transform !== 'none') {
+          if (
+            transform.includes('scaleY(-1)') ||
+            (transform.startsWith('matrix(') && transform.includes(', -1,'))
+          ) {
+            hasInvertingTransform = true;
+            break;
+          }
+        }
+        element = element.parentElement;
+      }
+
+      if (hasInvertingTransform) {
+        span.style.transform = 'scaleY(-1)';
+      }
+    }, 0);
+
     return { span, txt, zombiePrefix };
   }
 
