@@ -21,50 +21,63 @@
 
   // GitHub paths that are NOT repository links (easy to extend)
   const EXCLUDED_GITHUB_PATHS = [
-    'topics/',
-    'contact/',
-    'orgs/',
-    'settings/',
-    'notifications/',
-    'explore/',
-    'marketplace/',
-    'pricing/',
-    'features/',
-    'enterprise/',
-    'security/',
-    'sponsors/',
     'about/',
+    'account/',
+    'apps/',
     'blog/',
-    'developer/',
-    'support/',
-    'community/',
-    'events/',
+    'codespaces/',
     'collections/',
+    'community/',
+    'contact/',
+    'developer/',
     'discussions/',
-    'new/',
-    'organizations/',
+    'enterprise/',
+    'events/',
+    'explore/',
+    'features/',
+    'followers',
+    'git-guides',
+    'in-product-messaging/',
+    'join',
     'login',
     'logout',
-    'signup',
-    'join',
-    'apps/',
-    'oauth/',
-    'search',
-    'in-product-messaging/',
-    'account/',
-    'site/',
-    'codespaces/',
-    'git-guides',
+    'marketplace/',
     'mcp/',
+    'new/',
+    'notifications/',
+    'oauth/',
+    'organizations/',
+    'orgs/',
+    'pricing/',
+    'search',
+    'security/',
+    'settings/',
+    'signup',
+    'site/',
+    'sponsors/',
     'stars/',
+    'support/',
+    'topics/',
     'trending',
-    'watching',
-    'followers',
-    'users/'
+    'users/',
+    'watching'
   ];
 
   // GitHub path patterns that can appear anywhere in the path (not just at the start)
   const EXCLUDED_GITHUB_PATTERNS = ['.github-private'];
+
+  // Hard-coded webpage URLs where badges should never appear
+  // Add specific webpage URLs here where you don't want ANY GitHub badges to show
+  // These are checked against the current page URL (window.location.href)
+  // Example usage:
+  //   'https://example.com/sensitive-page',
+  //   'https://internal-docs.company.com',
+  //   'https://confluence.myorg.com/display/SECRET',
+  const HARD_CODED_EXCLUDED_PAGES = [
+    // Example: 'https://example.com/private-docs',
+    // Example: 'https://internal.company.com/wiki',
+    'https://github.com/orgs/'
+  ];
 
   function parseUrl(href) {
     if (extractRepoFromUrl) {
@@ -123,6 +136,23 @@
           (d && host === d.toLowerCase()) ||
           host.endsWith('.' + d.toLowerCase())
       );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function pageIsHardCodedExcluded() {
+    try {
+      const currentUrl = window.location.href.toLowerCase().replace(/\/$/, ''); // Remove trailing slash and normalize
+      return HARD_CODED_EXCLUDED_PAGES.some((excludedPage) => {
+        const normalizedExcluded = excludedPage
+          .toLowerCase()
+          .replace(/\/$/, '');
+        return (
+          currentUrl === normalizedExcluded ||
+          currentUrl.startsWith(normalizedExcluded + '/')
+        );
+      });
     } catch (e) {
       return false;
     }
@@ -230,6 +260,7 @@
   function insertBadge(anchor, owner, repo) {
     if (!badgesEnabled) return;
     if (hostIsDisabled()) return;
+    if (pageIsHardCodedExcluded()) return;
     if (anchor.dataset.ghStarsBadgeInserted) return;
     anchor.dataset.ghStarsBadgeInserted = '1';
 
