@@ -32,6 +32,7 @@
     'developer/',
     'discussions/',
     'enterprise/',
+    'enterprises/',
     'events/',
     'explore/',
     'features/',
@@ -76,7 +77,8 @@
   const HARD_CODED_EXCLUDED_PAGES = [
     // Example: 'https://example.com/private-docs',
     // Example: 'https://internal.company.com/wiki',
-    'https://github.com/orgs/'
+    'https://github.com/orgs/',
+    'https://github.com/settings/'
   ];
 
   function parseUrl(href) {
