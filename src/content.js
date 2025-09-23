@@ -67,7 +67,36 @@
   ];
 
   // GitHub path patterns that can appear anywhere in the path (not just at the start)
-  const EXCLUDED_GITHUB_PATTERNS = ['.github-private'];
+  const EXCLUDED_GITHUB_PATTERNS = [
+    '.github-private',
+    '/stargazers',
+    '/forks',
+    '/watchers',
+    '/network',
+    '/graphs',
+    '/contributors',
+    '/releases',
+    '/tags',
+    '/branches',
+    '/commits',
+    '/compare',
+    '/blame',
+    '/history',
+    '/raw',
+    '/tree/',
+    '/blob/',
+    '/commit/',
+    '/pull/',
+    '/issues',
+    '/projects',
+    '/wiki',
+    '/pulse',
+    '/settings',
+    '/actions',
+    '/security',
+    '/insights',
+    '/deployments'
+  ];
 
   // Hard-coded webpage URLs where badges should never appear
   // Add specific webpage URLs here where you don't want ANY GitHub badges to show
@@ -82,7 +111,8 @@
     'https://github.com/orgs/',
     'https://github.com/settings/',
     'https://google.com/search',
-    'https://www.google.com/complete/search'
+    'https://www.google.com/complete/search',
+    'https://github.com/trending'
   ];
 
   function parseUrl(href) {
@@ -435,6 +465,10 @@
       const text = (anchor.textContent || '').trim();
       const hasIcon = !!anchor.querySelector('svg, img');
       if (hasIcon && text.length === 0) return false;
+
+      // Skip links with itemprop="name codeRepository" - these are semantic markup for repo names
+      if (anchor.getAttribute('itemprop') === 'name codeRepository')
+        return false;
 
       // Avoid adding badges to links that point to the same repository page
       // e.g., when viewing /owner/repo don't badge intra-repo links
