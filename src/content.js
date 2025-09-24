@@ -29,6 +29,7 @@
     'collections/',
     'community/',
     'contact/',
+    'copilot/',
     'developer/',
     'discussions/',
     'enterprise/',
