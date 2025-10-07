@@ -96,7 +96,8 @@
     '/actions',
     '/security',
     '/insights',
-    '/deployments'
+    '/deployments',
+    'resources/'
   ];
 
   // Hard-coded webpage URLs where badges should never appear
@@ -113,7 +114,8 @@
     'https://github.com/settings/',
     'https://google.com/search',
     'https://www.google.com/complete/search',
-    'https://github.com/trending'
+    'https://github.com/trending',
+    'https://docs.github.com/'
   ];
 
   function parseUrl(href) {
@@ -455,7 +457,9 @@
         '[class*="label"]',
         '[class*="Label"]',
         '.tag',
-        '.tags'
+        '.tags',
+        // GitHub Dashboard Sidebars (Your repositories, etc.)
+        '.dashboard-sidebar'
       ];
 
       for (const sel of DENY_SELECTORS) {
