@@ -257,7 +257,93 @@
     });
   }
 
-  function makeBadgeElement() {
+  /**
+   * Calculate relative luminance of a color according to WCAG formula
+   * @param {number} r - Red value (0-255)
+   * @param {number} g - Green value (0-255)
+   * @param {number} b - Blue value (0-255)
+   * @returns {number} Relative luminance (0-1)
+   */
+  function getRelativeLuminance(r, g, b) {
+    const rsRGB = r / 255;
+    const gsRGB = g / 255;
+    const bsRGB = b / 255;
+
+    const rLinear =
+      rsRGB <= 0.04045 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
+    const gLinear =
+      gsRGB <= 0.04045 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
+    const bLinear =
+      bsRGB <= 0.04045 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
+
+    return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+  }
+
+  /**
+   * Detect if element has a dark background by traversing up the DOM tree
+   * @param {HTMLElement} element - The element to check
+   * @returns {boolean} True if background is dark
+   */
+  function isDarkBackground(element) {
+    let current = element;
+
+    // Traverse up to 10 levels to find a background color
+    for (let i = 0; i < 10 && current; i++) {
+      const style = window.getComputedStyle(current);
+      const bgColor = style.backgroundColor;
+
+      // Parse rgba/rgb color
+      const match = bgColor.match(
+        /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
+      );
+
+      if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const a = match[4] ? parseFloat(match[4]) : 1;
+
+        // If alpha is very low, the background is transparent, keep looking
+        if (a < 0.1) {
+          current = current.parentElement;
+          continue;
+        }
+
+        // Calculate relative luminance
+        const luminance = getRelativeLuminance(r, g, b);
+
+        // Dark backgrounds have low luminance (< 0.5)
+        return luminance < 0.5;
+      }
+
+      current = current.parentElement;
+    }
+
+    // Fallback: Check inherited text color
+    // If all backgrounds are transparent, check if text is light (indicating dark theme)
+    if (current) {
+      const style = window.getComputedStyle(current);
+      const textColor = style.color;
+      const match = textColor.match(
+        /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
+      );
+
+      if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const luminance = getRelativeLuminance(r, g, b);
+
+        // Light text (high luminance) indicates dark background
+        return luminance > 0.5;
+      }
+    }
+
+    // Default to light background if we can't determine
+    return false;
+  }
+
+  function makeBadgeElement(anchor) {
     const span = document.createElement('span');
     span.className = 'gh-stars-badge';
     span.setAttribute('role', 'img');
@@ -278,6 +364,11 @@
     span.appendChild(zombiePrefix);
     span.appendChild(svg);
     span.appendChild(txt);
+
+    // Apply dark background class if needed for adaptive text color
+    if (anchor && isDarkBackground(anchor)) {
+      span.classList.add('dark-bg');
+    }
 
     // Check if any parent element has scaleY(-1) transform that would flip our badge
     // If so, apply counter-transform to fix it
@@ -332,7 +423,7 @@
     if (anchor.dataset.ghStarsBadgeInserted) return;
     anchor.dataset.ghStarsBadgeInserted = '1';
 
-    const { span, txt, zombiePrefix } = makeBadgeElement();
+    const { span, txt, zombiePrefix } = makeBadgeElement(anchor);
     anchor.insertAdjacentElement('afterend', span);
 
     chrome.runtime.sendMessage(

@@ -196,3 +196,55 @@ test('skip links with resources/ in path', () => {
   // We can't directly test parseUrl from here, but we can verify the pattern is excluded
   expect(a.href).toContain('resources/');
 });
+
+test('dark background detection applies dark-bg class', (done) => {
+  window.location = new URL('https://example.com/');
+  global.chrome.runtime.sendMessage = (msg, cb) => {
+    cb({ stars: 100, updated: Date.now() });
+  };
+
+  loadContentScript();
+
+  // Create a dark background container
+  const darkContainer = document.createElement('div');
+  darkContainer.style.backgroundColor = 'rgb(30, 30, 30)'; // Dark background
+  document.body.appendChild(darkContainer);
+
+  const a = document.createElement('a');
+  a.href = 'https://github.com/owner/repo';
+  a.textContent = 'repo';
+  darkContainer.appendChild(a);
+
+  setTimeout(() => {
+    const badge = document.querySelector('.gh-stars-badge');
+    expect(badge).not.toBeNull();
+    expect(badge.classList.contains('dark-bg')).toBe(true);
+    done();
+  }, 10);
+});
+
+test('light background does not apply dark-bg class', (done) => {
+  window.location = new URL('https://example.com/');
+  global.chrome.runtime.sendMessage = (msg, cb) => {
+    cb({ stars: 100, updated: Date.now() });
+  };
+
+  loadContentScript();
+
+  // Create a light background container
+  const lightContainer = document.createElement('div');
+  lightContainer.style.backgroundColor = 'rgb(255, 255, 255)'; // Light background
+  document.body.appendChild(lightContainer);
+
+  const a = document.createElement('a');
+  a.href = 'https://github.com/owner/repo';
+  a.textContent = 'repo';
+  lightContainer.appendChild(a);
+
+  setTimeout(() => {
+    const badge = document.querySelector('.gh-stars-badge');
+    expect(badge).not.toBeNull();
+    expect(badge.classList.contains('dark-bg')).toBe(false);
+    done();
+  }, 10);
+});
