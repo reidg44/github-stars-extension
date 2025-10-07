@@ -192,7 +192,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               const json = await ghApi.getRepo(owner, repo, token);
               if (debug)
                 console.debug('[gh-stars] API response', { owner, repo, json });
-              await setCached(chrome.storage.local, owner, repo, json);
+
+              // Set cache and handle quota errors gracefully
+              try {
+                await setCached(chrome.storage.local, owner, repo, json);
+              } catch (cacheErr) {
+                // If quota exceeded, try to clean up and retry once
+                if (cacheErr.message && cacheErr.message.includes('quota')) {
+                  console.warn(
+                    '[gh-stars] Cache quota exceeded, cleaning up...'
+                  );
+                  await cleanupCache();
+                  try {
+                    await setCached(chrome.storage.local, owner, repo, json);
+                  } catch (retryErr) {
+                    console.error(
+                      '[gh-stars] Failed to cache after cleanup:',
+                      retryErr
+                    );
+                  }
+                }
+              }
               sendResponse({
                 stars: json.stargazers_count,
                 // use the repo's updated_at provided by the API
@@ -252,6 +272,92 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// Cache cleanup utilities
+async function cleanupCache() {
+  try {
+    const ttlMs = await new Promise((resolve) => getTtlMsFromSettings(resolve));
+    const allItems = await new Promise((resolve) => {
+      chrome.storage.local.get(null, (items) => resolve(items));
+    });
+
+    const now = Date.now();
+    const keysToRemove = [];
+
+    // Remove stale entries (older than 2x TTL to be safe)
+    const staleThreshold = ttlMs * 2;
+
+    for (const [key, value] of Object.entries(allItems)) {
+      // Only process our cache keys (format: gh:owner/repo)
+      if (key.startsWith('gh:') && value && value.ts) {
+        const age = now - value.ts;
+        if (age > staleThreshold) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    if (keysToRemove.length > 0) {
+      await new Promise((resolve) => {
+        chrome.storage.local.remove(keysToRemove, () => {
+          console.log(
+            `[gh-stars] Cleaned up ${keysToRemove.length} stale cache entries`
+          );
+          resolve();
+        });
+      });
+    }
+
+    // Check if cache is still too large (size-based eviction)
+    await evictOldestIfNeeded();
+  } catch (err) {
+    console.error('[gh-stars] Cache cleanup error:', err);
+  }
+}
+
+// Evict oldest entries if cache has too many items
+async function evictOldestIfNeeded() {
+  try {
+    const allItems = await new Promise((resolve) => {
+      chrome.storage.local.get(null, (items) => resolve(items));
+    });
+
+    const cacheEntries = Object.entries(allItems)
+      .filter(([key]) => key.startsWith('gh:'))
+      .map(([key, value]) => ({ key, ts: value.ts || 0 }));
+
+    const MAX_CACHE_ENTRIES = 500; // Reasonable limit to avoid quota issues
+
+    if (cacheEntries.length > MAX_CACHE_ENTRIES) {
+      // Sort by timestamp (oldest first)
+      cacheEntries.sort((a, b) => a.ts - b.ts);
+
+      // Remove oldest entries to get back to 80% of max
+      const targetSize = Math.floor(MAX_CACHE_ENTRIES * 0.8);
+      const toRemove = cacheEntries.slice(0, cacheEntries.length - targetSize);
+      const keysToRemove = toRemove.map((entry) => entry.key);
+
+      await new Promise((resolve) => {
+        chrome.storage.local.remove(keysToRemove, () => {
+          console.log(
+            `[gh-stars] Evicted ${keysToRemove.length} oldest cache entries (size limit)`
+          );
+          resolve();
+        });
+      });
+    }
+  } catch (err) {
+    console.error('[gh-stars] Cache eviction error:', err);
+  }
+}
+
+// Run cleanup on extension startup
+chrome.runtime.onStartup.addListener(() => {
+  console.log('[gh-stars] Extension startup - running cache cleanup');
+  cleanupCache();
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('GitHub Stars extension installed');
+  // Run cleanup on install/update
+  cleanupCache();
 });

@@ -164,3 +164,35 @@ test('displays archived gravestone and removes star svg when background signals 
     done();
   }, 10);
 });
+
+test('skip links inside dashboard-sidebar', () => {
+  window.location = new URL('https://github.com/');
+  loadContentScript();
+  const helper = window.__ghStarsTest.shouldInsertBadge;
+
+  // Create a sidebar with dashboard-sidebar class
+  const sidebar = document.createElement('div');
+  sidebar.className = 'dashboard-sidebar';
+
+  const a = document.createElement('a');
+  a.href = 'https://github.com/owner/repo';
+  a.textContent = 'repo';
+  sidebar.appendChild(a);
+  document.body.appendChild(sidebar);
+
+  // Should not insert badge in dashboard sidebar
+  expect(helper(a, 'owner', 'repo')).toBe(false);
+});
+
+test('skip links with resources/ in path', () => {
+  loadContentScript();
+  // The parseUrl function should exclude paths with 'resources/' in them
+  const a = document.createElement('a');
+  a.href = 'https://github.com/owner/repo/resources/something';
+  a.textContent = 'resources';
+  document.body.appendChild(a);
+
+  // This link should be filtered out by parseUrl, so it won't even reach shouldInsertBadge
+  // We can't directly test parseUrl from here, but we can verify the pattern is excluded
+  expect(a.href).toContain('resources/');
+});

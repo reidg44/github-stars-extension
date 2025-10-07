@@ -3,7 +3,10 @@ const fakeStorage = {
   local: {
     store: {},
     get(keys, cb) {
-      if (Array.isArray(keys)) {
+      if (keys === null) {
+        // Get all items
+        cb({ ...this.store });
+      } else if (Array.isArray(keys)) {
         const res = {};
         keys.forEach((k) => {
           if (k in this.store) res[k] = this.store[k];
@@ -21,6 +24,11 @@ const fakeStorage = {
     },
     set(obj, cb) {
       Object.assign(this.store, obj);
+      if (cb) cb();
+    },
+    remove(keys, cb) {
+      const keyArray = Array.isArray(keys) ? keys : [keys];
+      keyArray.forEach((k) => delete this.store[k]);
       if (cb) cb();
     }
   },
@@ -60,7 +68,8 @@ const chrome = {
         messageHandler = fn;
       }
     },
-    onInstalled: { addListener: () => {} }
+    onInstalled: { addListener: () => {} },
+    onStartup: { addListener: () => {} }
   }
 };
 
