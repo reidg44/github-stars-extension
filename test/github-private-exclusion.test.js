@@ -7,7 +7,8 @@ describe('GitHub Private Repository Exclusion', () => {
 
       try {
         const url = new URL(href);
-        if (url.hostname.toLowerCase().includes('github.com')) {
+        const allowedHostnames = ['github.com', 'www.github.com'];
+        if (allowedHostnames.includes(url.hostname.toLowerCase())) {
           const path = url.pathname.toLowerCase();
           const cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
