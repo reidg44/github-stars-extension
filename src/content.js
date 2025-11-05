@@ -512,8 +512,9 @@
   function shouldInsertBadge(anchor, owner, repo) {
     try {
       const host = window.location.hostname.toLowerCase();
+      const ALLOWED_GITHUB_HOSTS = ['github.com', 'www.github.com', 'gist.github.com'];
       // If we're not on GitHub itself, allow badges everywhere (subject to disabled domains)
-      if (!host.endsWith('github.com')) return true;
+      if (!ALLOWED_GITHUB_HOSTS.includes(host)) return true;
 
       // On GitHub pages, be conservative: skip links that are within UI chrome
       const DENY_SELECTORS = [
