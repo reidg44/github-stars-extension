@@ -127,7 +127,9 @@
     // Check if this is an excluded GitHub path
     try {
       const url = new URL(href);
-      if (url.hostname.toLowerCase().includes('github.com')) {
+      const hostname = url.hostname.toLowerCase();
+      // Only allow github.com and *.github.com
+      if (hostname === 'github.com' || hostname.endsWith('.github.com')) {
         const path = url.pathname.toLowerCase();
         // Remove leading slash for comparison
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;
