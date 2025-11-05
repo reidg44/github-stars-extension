@@ -44,7 +44,9 @@ function extractRepoFromUrl(url) {
     const u = new URL(url, 'https://example.com');
     // Only care about github.com host (allow subdomains like www)
     const host = u.hostname.toLowerCase();
-    if (!host.endsWith('github.com')) return null;
+    // Accept only github.com and its direct subdomains
+    const hostParts = host.split('.');
+    if (hostParts.length < 2 || hostParts.slice(-2).join('.') !== 'github.com') return null;
 
     // Check if this is an excluded GitHub path
     const path = u.pathname.toLowerCase();
