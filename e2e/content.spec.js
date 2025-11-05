@@ -156,11 +156,10 @@ test('E2E: excluded GitHub URLs do not get parsed as repos', async ({
     // Simulate the same filtering logic the extension uses
     anchors.forEach((a) => {
       const href = a.href;
-      if (!href.includes('github.com')) return;
-
-      // Test the same parseUrl logic - check for excluded paths
       try {
         const url = new URL(href);
+        // Only process links whose hostname is github.com or www.github.com
+        if (url.hostname !== 'github.com' && url.hostname !== 'www.github.com') return;
         const path = url.pathname.toLowerCase();
         const cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
@@ -214,7 +213,7 @@ test('E2E: excluded GitHub URLs do not get parsed as repos', async ({
           }
         }
       } catch (e) {
-        // If parsing fails, still check repo pattern
+        // If parsing fails, fallback to regex for strict hostname match
         const repoPattern =
           /^https?:\/\/(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:[/#?]|$)/i;
         if (repoPattern.test(href)) {
