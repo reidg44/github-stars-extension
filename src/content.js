@@ -53,6 +53,7 @@
     'orgs/',
     'pricing/',
     'readme/',
+    'repos/',
     'search',
     'security/',
     'settings/',
@@ -64,40 +65,41 @@
     'topics/',
     'trending',
     'users/',
-    'watching'
+    'watching',
+    'customer-terms/'
   ];
 
   // GitHub path patterns that can appear anywhere in the path (not just at the start)
   const EXCLUDED_GITHUB_PATTERNS = [
     '.github-private',
-    '/stargazers',
-    '/forks',
-    '/watchers',
-    '/network',
-    '/graphs',
-    '/contributors',
-    '/releases',
-    '/tags',
+    '/actions',
+    '/blame',
+    '/blob/',
     '/branches',
+    '/commit/',
     '/commits',
     '/compare',
-    '/blame',
-    '/history',
-    '/raw',
-    '/tree/',
-    '/blob/',
-    '/commit/',
-    '/pull/',
-    '/issues',
-    '/projects',
-    '/wiki',
-    '/pulse',
-    '/settings',
-    '/actions',
-    '/security',
-    '/insights',
+    '/contributors',
     '/deployments',
-    'resources/'
+    '/forks',
+    '/graphs',
+    '/history',
+    '/insights',
+    '/issues',
+    '/network',
+    '/projects',
+    '/pull/',
+    '/pulse',
+    '/raw',
+    '/releases',
+    '/resources/',
+    '/security',
+    '/settings',
+    '/stargazers',
+    '/tags',
+    '/tree/',
+    '/watchers',
+    '/wiki'
   ];
 
   // Hard-coded webpage URLs where badges should never appear
@@ -110,12 +112,13 @@
   const HARD_CODED_EXCLUDED_PAGES = [
     // Example: 'https://example.com/private-docs',
     // Example: 'https://internal.company.com/wiki',
+    'https://docs.github.com/',
     'https://github.com/orgs/',
-    'https://github.com/settings/',
-    'https://google.com/search',
-    'https://www.google.com/complete/search',
+    'https://github.com/repos',
+    'https://github.com/settings',
     'https://github.com/trending',
-    'https://docs.github.com/'
+    'https://google.com/search',
+    'https://www.google.com/complete/search'
   ];
 
   function parseUrl(href) {
@@ -512,7 +515,11 @@
   function shouldInsertBadge(anchor, owner, repo) {
     try {
       const host = window.location.hostname.toLowerCase();
-      const ALLOWED_GITHUB_HOSTS = ['github.com', 'www.github.com', 'gist.github.com'];
+      const ALLOWED_GITHUB_HOSTS = [
+        'github.com',
+        'www.github.com',
+        'gist.github.com'
+      ];
       // If we're not on GitHub itself, allow badges everywhere (subject to disabled domains)
       if (!ALLOWED_GITHUB_HOSTS.includes(host)) return true;
 
