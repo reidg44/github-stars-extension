@@ -115,6 +115,7 @@
     'https://docs.github.com/',
     'https://github.com/orgs/',
     'https://github.com/repos',
+    'https://github.com/repos?',
     'https://github.com/settings',
     'https://github.com/trending',
     'https://google.com/search',
