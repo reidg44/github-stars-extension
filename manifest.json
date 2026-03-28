@@ -26,6 +26,6 @@
     "open_in_tab": true,
     "page": "src/options.html"
   },
-  "permissions": ["storage", "scripting", "tabs"],
+  "permissions": ["storage"],
   "version": "0.1.0"
 }

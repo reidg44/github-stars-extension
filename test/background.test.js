@@ -56,21 +56,28 @@ const fakeStorage = {
     set(obj, cb) {
       Object.assign(this.store, obj);
       if (cb) cb();
+    },
+    remove(keys, cb) {
+      const keyArray = Array.isArray(keys) ? keys : [keys];
+      keyArray.forEach((k) => delete this.store[k]);
+      if (cb) cb();
     }
   }
 };
 
 // Minimal runtime messaging emulation
 let messageHandler = null;
+let onInstalledHandler = null;
 const chrome = {
   storage: fakeStorage,
   runtime: {
+    id: 'test-extension-id',
     onMessage: {
       addListener(fn) {
         messageHandler = fn;
       }
     },
-    onInstalled: { addListener: () => {} },
+    onInstalled: { addListener: (fn) => { onInstalledHandler = fn; } },
     onStartup: { addListener: () => {} }
   }
 };
@@ -88,7 +95,7 @@ function loadBackgroundWithMockFetch() {
 function sendGetStars(owner, repo) {
   return new Promise((resolve) => {
     // Simulate runtime sendMessage; the background code uses addListener that calls sendResponse
-    messageHandler({ type: 'GET_STARS', owner, repo }, {}, (resp) =>
+    messageHandler({ type: 'GET_STARS', owner, repo }, { id: 'test-extension-id' }, (resp) =>
       resolve(resp)
     );
   });
@@ -110,14 +117,16 @@ test('returns cached when fresh', async () => {
   // put fresh cached entry
   fakeStorage.local.set({ [key]: { data: { stargazers_count: 42 }, ts: now } });
   // set TTL to large value
-  fakeStorage.sync.set({ cache_ttl_minutes: 60 });
+  fakeStorage.sync.set({ cache_ttl_hours: 1 });
 
-  // ensure fetch is not used (we are returning cached)
-  global.fetch = undefined;
+  // ensure fetch is not called (we are returning cached)
+  let fetchCalled = false;
+  global.fetch = () => { fetchCalled = true; return Promise.reject(new Error('should not be called')); };
   loadBackgroundWithMockFetch();
   const res = await sendGetStars(owner, repo);
   expect(res.stars).toBe(42);
   expect(res.cached).toBe(true);
+  expect(fetchCalled).toBe(false);
 });
 
 test('old cache but API success updates cache', async () => {
@@ -130,7 +139,7 @@ test('old cache but API success updates cache', async () => {
     [key]: { data: { stargazers_count: 10 }, ts: oldTs }
   });
   // set TTL to 60 minutes
-  fakeStorage.sync.set({ cache_ttl_minutes: 60 });
+  fakeStorage.sync.set({ cache_ttl_hours: 1 });
 
   // mock fetch returns new value
   global.fetch = async () => ({
@@ -157,7 +166,7 @@ test('old cache and API failure returns cached data', async () => {
   fakeStorage.local.set({
     [key]: { data: { stargazers_count: 7 }, ts: oldTs }
   });
-  fakeStorage.sync.set({ cache_ttl_minutes: 60 });
+  fakeStorage.sync.set({ cache_ttl_hours: 1 });
 
   global.fetch = async () => {
     throw new Error('network');
@@ -170,7 +179,7 @@ test('old cache and API failure returns cached data', async () => {
 test('no cache and API failure returns error', async () => {
   const owner = 'reidg44';
   const repo = 'github-stars-extension';
-  fakeStorage.sync.set({ cache_ttl_minutes: 60 });
+  fakeStorage.sync.set({ cache_ttl_hours: 1 });
 
   global.fetch = async () => {
     throw new Error('fail');
@@ -178,6 +187,20 @@ test('no cache and API failure returns error', async () => {
   loadBackgroundWithMockFetch();
   const res = await sendGetStars(owner, repo);
   expect(res.error).toBeDefined();
+});
+
+test('migrates gh_token from sync to local on install', async () => {
+  fakeStorage.sync.store = { gh_token: 'ghp_migrated123' }; // betterleaks:allow
+  fakeStorage.local.store = {};
+
+  // onInstalledHandler was captured when background.js first loaded
+  expect(onInstalledHandler).toBeTruthy();
+  onInstalledHandler();
+
+  await new Promise((r) => setTimeout(r, 50));
+
+  expect(fakeStorage.local.store.gh_token).toBe('ghp_migrated123');
+  expect(fakeStorage.sync.store.gh_token).toBeUndefined();
 });
 
 test('cleanupCache removes stale entries older than 2x TTL', async () => {
@@ -324,4 +347,124 @@ test('cache quota error triggers cleanup and retry', async () => {
 
   // Restore original
   fakeStorage.local.set = originalSet;
+});
+
+test('rejects messages from unauthorized sender', async () => {
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ stargazers_count: 1 })
+  });
+  loadBackgroundWithMockFetch();
+
+  const res = await new Promise((resolve) => {
+    messageHandler(
+      { type: 'GET_STARS', owner: 'a', repo: 'b' },
+      { id: 'malicious-extension-id' },
+      (resp) => resolve(resp)
+    );
+  });
+  expect(res.error).toBe('Unauthorized sender');
+});
+
+test('rejects invalid owner/repo with path traversal', async () => {
+  fakeStorage.sync.store = {};
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ stargazers_count: 1 })
+  });
+  loadBackgroundWithMockFetch();
+
+  const res = await sendGetStars('../etc', 'passwd');
+  expect(res.error).toBe('Invalid owner or repo');
+});
+
+test('limits concurrent API requests to MAX_CONCURRENT', async () => {
+  fakeStorage.sync.store = {};
+  fakeStorage.local.store = {};
+
+  let activeFetches = 0;
+  let maxActiveFetches = 0;
+
+  global.fetch = async () => {
+    activeFetches++;
+    maxActiveFetches = Math.max(maxActiveFetches, activeFetches);
+    // Simulate network delay
+    await new Promise((r) => setTimeout(r, 50));
+    activeFetches--;
+    return {
+      ok: true,
+      json: async () => ({
+        stargazers_count: 1,
+        updated_at: new Date().toISOString(),
+        pushed_at: new Date().toISOString(),
+        archived: false
+      })
+    };
+  };
+
+  loadBackgroundWithMockFetch();
+
+  // Send 12 requests simultaneously
+  const promises = [];
+  for (let i = 0; i < 12; i++) {
+    promises.push(sendGetStars(`owner${i}`, `repo${i}`));
+  }
+
+  await Promise.all(promises);
+
+  // Should never exceed 6 concurrent fetches
+  expect(maxActiveFetches).toBeLessThanOrEqual(6);
+  // But should have actually used concurrency
+  expect(maxActiveFetches).toBeGreaterThan(1);
+});
+
+test('caches only needed fields from API response', async () => {
+  const owner = 'trim';
+  const repo = 'test';
+  const key = `gh:${owner}/${repo}`;
+  fakeStorage.sync.store = {};
+  fakeStorage.local.store = {};
+
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      stargazers_count: 99,
+      updated_at: '2025-01-01T00:00:00Z',
+      pushed_at: '2025-01-01T00:00:00Z',
+      archived: false,
+      full_name: 'trim/test',
+      description: 'should not be cached',
+      owner: { login: 'trim' },
+      html_url: 'https://github.com/trim/test',
+      permissions: { admin: true }
+    })
+  });
+
+  loadBackgroundWithMockFetch();
+  await sendGetStars(owner, repo);
+
+  const cached = fakeStorage.local.store[key];
+  expect(cached).toBeDefined();
+  expect(cached.data.stargazers_count).toBe(99);
+  expect(cached.data.updated_at).toBe('2025-01-01T00:00:00Z');
+  expect(cached.data.pushed_at).toBe('2025-01-01T00:00:00Z');
+  expect(cached.data.archived).toBe(false);
+  // These fields should NOT be cached
+  expect(cached.data.full_name).toBeUndefined();
+  expect(cached.data.description).toBeUndefined();
+  expect(cached.data.owner).toBeUndefined();
+  expect(cached.data.html_url).toBeUndefined();
+  expect(cached.data.permissions).toBeUndefined();
+});
+
+test('rejects owner with slash', async () => {
+  fakeStorage.sync.store = {};
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ stargazers_count: 1 })
+  });
+  loadBackgroundWithMockFetch();
+
+  const res = await sendGetStars('owner/evil', 'repo');
+  expect(res.error).toBe('Invalid owner or repo');
 });

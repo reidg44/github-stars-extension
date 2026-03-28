@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // legacy status element (kept for screen-reader aria-live). We use toasts for visual feedback.
   const status = document.getElementById('status');
   const toastContainer = document.getElementById('toast-container');
-  const disableSiteBtn = document.getElementById('disable-site');
   const resetBtn = document.getElementById('reset');
 
   // Token masking state
@@ -61,18 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  chrome.storage.sync.get(
-    [
-      'gh_token',
-      'cache_ttl_hours',
-      'cache_ttl_minutes',
-      'inactive_threshold_days',
-      'badges_enabled',
-      'debug_logging'
-    ],
-    (items) => {
-      if (items.gh_token) {
-        actualToken = items.gh_token;
+  chrome.storage.local.get(['gh_token'], (tokenItems) => {
+    chrome.storage.sync.get(
+      [
+        'cache_ttl_hours',
+        'cache_ttl_minutes',
+        'inactive_threshold_days',
+        'badges_enabled',
+        'debug_logging'
+      ],
+      (items) => {
+        if (tokenItems.gh_token) {
+          actualToken = tokenItems.gh_token;
         // If there's a saved token, show it masked initially
         isTokenMasked = true;
         updateTokenDisplay();
@@ -110,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   );
+  });
 
   // load disabled domains
   const disabledListEl = document.getElementById('disabled-list');
@@ -168,48 +168,23 @@ document.addEventListener('DOMContentLoaded', () => {
       actualToken = token;
     }
 
-    chrome.storage.sync.set(
-      {
-        gh_token: token,
-        cache_ttl_hours: ttl,
-        inactive_threshold_days: inactiveDays,
-        badges_enabled: enabled,
-        debug_logging: debug
-      },
-      () => {
-        showToast('Saved.', 'success');
-        // After saving, mask the token if it exists
-        if (token) {
-          isTokenMasked = true;
-          updateTokenDisplay();
+    chrome.storage.local.set({ gh_token: token }, () => {
+      chrome.storage.sync.set(
+        {
+          cache_ttl_hours: ttl,
+          inactive_threshold_days: inactiveDays,
+          badges_enabled: enabled,
+          debug_logging: debug
+        },
+        () => {
+          showToast('Saved.', 'success');
+          if (token) {
+            isTokenMasked = true;
+            updateTokenDisplay();
+          }
         }
-      }
-    );
-  });
-
-  // Disable badges for the current site (quick button)
-  disableSiteBtn.addEventListener('click', () => {
-    // try to get the active tab's hostname
-    if (chrome.tabs && chrome.tabs.query) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const tab = tabs && tabs[0];
-        if (!tab || !tab.url) {
-          alert('Could not determine current site');
-          return;
-        }
-        try {
-          const u = new URL(tab.url);
-          const host = u.hostname;
-          addDomainToList(host);
-          saveDomains();
-          showToast(`Disabled for ${host}`, 'success');
-        } catch (e) {
-          alert('Could not parse current site URL');
-        }
-      });
-    } else {
-      alert('Tabs API not available. Manually add the domain.');
-    }
+      );
+    });
   });
 
   // Reset to defaults
@@ -231,18 +206,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('enabled').checked = true;
     // clear list
     disabledListEl.innerHTML = '';
-    chrome.storage.sync.set(
-      {
-        gh_token: '',
-        cache_ttl_hours: 24,
-        inactive_threshold_days: 60,
-        badges_enabled: true,
-        disabled_domains: []
-      },
-      () => {
-        showToast('Reset to defaults', 'success');
-      }
-    );
+    chrome.storage.local.set({ gh_token: '' }, () => {
+      chrome.storage.sync.set(
+        {
+          cache_ttl_hours: 24,
+          inactive_threshold_days: 60,
+          badges_enabled: true,
+          disabled_domains: []
+        },
+        () => {
+          showToast('Reset to defaults', 'success');
+        }
+      );
+    });
   });
 
   // Toast helper

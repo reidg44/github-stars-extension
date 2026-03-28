@@ -64,6 +64,30 @@ if (!ghApi) {
 
 const DEFAULT_TTL_MS = 1000 * 60 * 60 * 24; // fallback 24 hours
 
+const MAX_CONCURRENT = 6;
+let activeRequests = 0;
+const pendingQueue = [];
+
+function acquireSlot() {
+  return new Promise((resolve) => {
+    if (activeRequests < MAX_CONCURRENT) {
+      activeRequests++;
+      resolve();
+    } else {
+      pendingQueue.push(resolve);
+    }
+  });
+}
+
+function releaseSlot() {
+  activeRequests--;
+  if (pendingQueue.length > 0) {
+    activeRequests++;
+    const next = pendingQueue.shift();
+    next();
+  }
+}
+
 function getTtlMsFromSettings(cb) {
   chrome.storage.sync.get(['cache_ttl_hours', 'cache_ttl_minutes'], (items) => {
     let hours;
@@ -86,8 +110,18 @@ function getTtlMsFromSettings(cb) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'GET_STARS') {
+    // Validate sender is from this extension
+    if (!sender || sender.id !== chrome.runtime.id) {
+      sendResponse({ error: 'Unauthorized sender' });
+      return false;
+    }
     (async () => {
       const { owner, repo } = msg;
+      const VALID_SEGMENT = /^[A-Za-z0-9_.-]+$/;
+      if (!owner || !repo || !VALID_SEGMENT.test(owner) || !VALID_SEGMENT.test(repo)) {
+        sendResponse({ error: 'Invalid owner or repo' });
+        return;
+      }
       try {
         const ttlMs = await new Promise((resolve) =>
           getTtlMsFromSettings(resolve)
@@ -118,13 +152,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
         };
         const cached = await getCached(chrome.storage.local, owner, repo);
-        chrome.storage.sync.get(
-          ['gh_token', 'debug_logging'],
-          async (items) => {
+        chrome.storage.local.get(['gh_token'], async (tokenItems) => {
+          chrome.storage.sync.get(['debug_logging'], async (syncItems) => {
             let debug = false;
             try {
-              const token = items.gh_token;
-              debug = !!items.debug_logging;
+              const token = tokenItems.gh_token;
+              debug = !!syncItems.debug_logging;
               if (debug)
                 console.debug('[gh-stars] GET_STARS', { owner, repo, cached });
               if (!token) {
@@ -136,66 +169,47 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               // If we have a fresh cached value, perform a quick HEAD check to ensure the repo still exists.
 
               if (isFresh(cached, ttlMs)) {
-                try {
-                  const url = `https://api.github.com/repos/${owner}/${repo}`;
-                  const headers = { Accept: 'application/vnd.github.v3+json' };
-                  if (token) headers['Authorization'] = `token ${token}`;
-                  const headResp = await fetch(url, {
-                    method: 'HEAD',
-                    headers
-                  });
-                  // If HEAD reports 404, prefer signaling notFound even though cache is fresh
-                  if (headResp.status === 404) {
-                    sendResponse({ error: 'Not Found', notFound: true });
-                    return;
-                  }
-                  // otherwise, return the cached value
-                  sendResponse({
-                    stars: cached.data.stargazers_count,
-                    // expose the repository's updated_at (when available) so callers can
-                    // compute inactivity from the repository's last push/update time.
-                    updated:
-                      cached.data && cached.data.updated_at
-                        ? cached.data.updated_at
-                        : new Date(cached.ts).toISOString(),
-                    pushed_at:
-                      cached.data && cached.data.pushed_at
-                        ? cached.data.pushed_at
-                        : null,
-                    fetched_at: cached.ts,
-                    cached: true,
-                    archived: !!cached.data.archived,
-                    inactive: computeInactiveFlag(cached.data.pushed_at)
-                  });
-                  return;
-                } catch (headErr) {
-                  // network errors when checking HEAD -> fall back to cached
-                  sendResponse({
-                    stars: cached.data.stargazers_count,
-                    updated:
-                      cached.data && cached.data.updated_at
-                        ? cached.data.updated_at
-                        : new Date(cached.ts).toISOString(),
-                    pushed_at:
-                      cached.data && cached.data.pushed_at
-                        ? cached.data.pushed_at
-                        : null,
-                    fetched_at: cached.ts,
-                    cached: true,
-                    archived: !!cached.data.archived,
-                    inactive: computeInactiveFlag(cached.data.pushed_at)
-                  });
-                  return;
-                }
+                sendResponse({
+                  stars: cached.data.stargazers_count,
+                  updated:
+                    cached.data && cached.data.updated_at
+                      ? cached.data.updated_at
+                      : new Date(cached.ts).toISOString(),
+                  pushed_at:
+                    cached.data && cached.data.pushed_at
+                      ? cached.data.pushed_at
+                      : null,
+                  fetched_at: cached.ts,
+                  cached: true,
+                  archived: !!cached.data.archived,
+                  inactive: computeInactiveFlag(cached.data.pushed_at)
+                });
+                return;
               }
 
-              const json = await ghApi.getRepo(owner, repo, token);
+              await acquireSlot();
+              let json;
+              try {
+                json = await ghApi.getRepo(owner, repo, token);
+              } catch (fetchErr) {
+                releaseSlot();
+                throw fetchErr;
+              }
+              releaseSlot();
               if (debug)
                 console.debug('[gh-stars] API response', { owner, repo, json });
 
+              // Trim API response to only the fields we need
+              const cacheData = {
+                stargazers_count: json.stargazers_count,
+                updated_at: json.updated_at,
+                pushed_at: json.pushed_at,
+                archived: json.archived
+              };
+
               // Set cache and handle quota errors gracefully
               try {
-                await setCached(chrome.storage.local, owner, repo, json);
+                await setCached(chrome.storage.local, owner, repo, cacheData);
               } catch (cacheErr) {
                 // If quota exceeded, try to clean up and retry once
                 if (cacheErr.message && cacheErr.message.includes('quota')) {
@@ -204,7 +218,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                   );
                   await cleanupCache();
                   try {
-                    await setCached(chrome.storage.local, owner, repo, json);
+                    await setCached(chrome.storage.local, owner, repo, cacheData);
                   } catch (retryErr) {
                     console.error(
                       '[gh-stars] Failed to cache after cleanup:',
@@ -262,8 +276,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                 sendResponse({ error: msg });
               }
             }
-          }
-        );
+          });
+        });
       } catch (err) {
         sendResponse({ error: err.message });
       }
@@ -360,4 +374,19 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('GitHub Stars extension installed');
   // Run cleanup on install/update
   cleanupCache();
+
+  // Migrate token from sync to local
+  chrome.storage.sync.get(['gh_token'], (syncItems) => {
+    if (syncItems.gh_token) {
+      chrome.storage.local.get(['gh_token'], (localItems) => {
+        if (!localItems.gh_token) {
+          chrome.storage.local.set({ gh_token: syncItems.gh_token }, () => {
+            chrome.storage.sync.remove('gh_token');
+          });
+        } else {
+          chrome.storage.sync.remove('gh_token');
+        }
+      });
+    }
+  });
 });

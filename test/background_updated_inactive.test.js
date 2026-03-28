@@ -54,6 +54,11 @@ const fakeStorage = {
     set(obj, cb) {
       Object.assign(this.store, obj);
       if (cb) cb();
+    },
+    remove(keys, cb) {
+      const keyArray = Array.isArray(keys) ? keys : [keys];
+      keyArray.forEach((k) => delete this.store[k]);
+      if (cb) cb();
     }
   }
 };
@@ -63,6 +68,7 @@ let messageHandler = null;
 const chrome = {
   storage: fakeStorage,
   runtime: {
+    id: 'test-extension-id',
     onMessage: {
       addListener(fn) {
         messageHandler = fn;
@@ -83,7 +89,7 @@ function loadBackgroundWithMockFetch() {
 
 function sendGetStars(owner, repo) {
   return new Promise((resolve) => {
-    messageHandler({ type: 'GET_STARS', owner, repo }, {}, (resp) =>
+    messageHandler({ type: 'GET_STARS', owner, repo }, { id: 'test-extension-id' }, (resp) =>
       resolve(resp)
     );
   });

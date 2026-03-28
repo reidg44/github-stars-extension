@@ -95,14 +95,14 @@ test('displays notFound indicator when background signals 404', (done) => {
   a.textContent = 'missing-repo';
   document.body.appendChild(a);
 
-  // allow mutation observer / async sendMessage callback to run
+  // allow mutation observer / rAF debounce / async sendMessage callback to run
   setTimeout(() => {
     const badge = document.querySelector('.gh-stars-badge');
     expect(badge).not.toBeNull();
     const txt = badge.querySelector('.gh-stars-count');
     expect(txt.textContent).toBe('🚫');
     done();
-  }, 10);
+  }, 50);
 });
 
 test('displays inactive (zombie) indicator when background signals inactive', (done) => {
@@ -137,7 +137,7 @@ test('displays inactive (zombie) indicator when background signals inactive', (d
     const svg = badge.querySelector('svg');
     expect(svg).not.toBeNull();
     done();
-  }, 10);
+  }, 50);
 });
 
 test('displays archived gravestone and removes star svg when background signals archived', (done) => {
@@ -162,7 +162,7 @@ test('displays archived gravestone and removes star svg when background signals 
     const svg = badge.querySelector('svg');
     expect(svg).toBeNull();
     done();
-  }, 10);
+  }, 50);
 });
 
 test('skip links inside dashboard-sidebar', () => {
@@ -220,7 +220,7 @@ test('dark background detection applies dark-bg class', (done) => {
     expect(badge).not.toBeNull();
     expect(badge.classList.contains('dark-bg')).toBe(true);
     done();
-  }, 10);
+  }, 50);
 });
 
 test('light background does not apply dark-bg class', (done) => {
@@ -246,5 +246,5 @@ test('light background does not apply dark-bg class', (done) => {
     expect(badge).not.toBeNull();
     expect(badge.classList.contains('dark-bg')).toBe(false);
     done();
-  }, 10);
+  }, 50);
 });

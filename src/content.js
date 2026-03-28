@@ -221,8 +221,8 @@
 
   // Log a page-visible warning once if no GH token is configured.
   try {
-    if (chrome && chrome.storage && chrome.storage.sync) {
-      chrome.storage.sync.get(['gh_token'], (items) => {
+    if (chrome && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['gh_token'], (items) => {
         const token = items && items.gh_token;
         if (!token) {
           try {
@@ -357,8 +357,9 @@
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 16 16');
-    svg.innerHTML =
-      '<path d="M8 12.026l-3.717 1.955.71-4.144L1.5 6.817l4.175-.607L8 2.5l1.325 3.71 4.175.607-3.493 2.999.71 4.144z"/>';
+    const svgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    svgPath.setAttribute('d', 'M8 12.026l-3.717 1.955.71-4.144L1.5 6.817l4.175-.607L8 2.5l1.325 3.71 4.175.607-3.493 2.999.71 4.144z');
+    svg.appendChild(svgPath);
     const txt = document.createElement('span');
     txt.className = 'gh-stars-count';
     txt.textContent = '…';
@@ -629,8 +630,15 @@
     scanAndInsert();
 
     // Observe DOM changes for dynamically added links
+    let scanScheduled = false;
     const mo = new MutationObserver(() => {
-      scanAndInsert();
+      if (!scanScheduled) {
+        scanScheduled = true;
+        requestAnimationFrame(() => {
+          scanAndInsert();
+          scanScheduled = false;
+        });
+      }
     });
     const target = document.body || document.documentElement;
     if (target && typeof target.nodeType === 'number') {

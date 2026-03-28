@@ -9,10 +9,10 @@
 # pre-commit run --all-files
 
 repos:
-    - repo: https://github.com/gitleaks/gitleaks
-      rev: v8.28.0
+    - repo: https://github.com/betterleaks/betterleaks
+      rev: v1.1.1
       hooks:
-          - id: gitleaks
+          - id: betterleaks
 
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0
