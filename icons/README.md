@@ -14,7 +14,7 @@ The logo combines:
 
 ### Production Icons (PNG format - used by Chrome extension)
 - `icon16.png` - Small icon for browser toolbar (16x16)
-- `icon48.png` - Medium icon for extension management (48x48) 
+- `icon48.png` - Medium icon for extension management (48x48)
 - `icon128.png` - Large icon for Chrome Web Store (128x128)
 
 ### Source Files (SVG format - for editing and reference)

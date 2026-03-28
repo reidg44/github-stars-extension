@@ -3,8 +3,8 @@
     <!-- Background circle -->
     <circle cx="64" cy="64" r="64" fill="#24292f"/>
     <!-- Bigger GitHub-style star -->
-    <path d="M64 16 L76 44 L108 44 L82 64 L94 92 L64 76 L34 92 L46 64 L20 44 L52 44 Z" 
-        fill="#ffd700" 
-        stroke="#fff" 
+    <path d="M64 16 L76 44 L108 44 L82 64 L94 92 L64 76 L34 92 L46 64 L20 44 L52 44 Z"
+        fill="#ffd700"
+        stroke="#fff"
         stroke-width="2"/>
 </svg>
