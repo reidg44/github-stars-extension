@@ -4,20 +4,27 @@ const fs = require('fs');
 
 // Helper to inject the extension's content script into the page context
 async function injectContentScript(page) {
-  // First inject the parseRepo module
+  // Inject the lib modules the content script requires
   const parseRepoSrc = fs.readFileSync(
     path.resolve(__dirname, '../src/lib/parseRepo.js'),
     'utf8'
   );
+  const domainSrc = fs.readFileSync(
+    path.resolve(__dirname, '../src/lib/domain.js'),
+    'utf8'
+  );
 
-  // Create a module setup for parseRepo
+  // Create a module setup for the lib modules
   const moduleSetup = `
-    // Set up module system for parseRepo
+    // Set up module system for the content script's lib requires
     window.require = window.require || function(path) {
       if (path === './lib/parseRepo') {
-        // Inject parseRepo module content
         ${parseRepoSrc}
-        return { extractRepoFromUrl };
+        return { extractRepoFromUrl, extractBadgeableRepo };
+      }
+      if (path === './lib/domain') {
+        ${domainSrc}
+        return { hostMatchesDisabled };
       }
       return {};
     };

@@ -8,7 +8,7 @@
   "content_scripts": [
     {
       "css": ["src/styles/badge.css"],
-      "js": ["src/content.js"],
+      "js": ["dist/content.js"],
       "matches": ["http://*/*", "https://*/*"],
       "run_at": "document_idle"
     }

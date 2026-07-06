@@ -9,7 +9,7 @@ Manifest V3 Chrome extension that displays GitHub star counts as inline badges n
 ## Commands
 
 ```bash
-npm run build          # Bundle src/background.js → dist/background.js (esbuild, required before loading extension)
+npm run build          # Bundle src/background.js + src/content.js → dist/ (esbuild, required before loading extension)
 npm run lint           # ESLint on all .js files
 npm test               # Jest unit tests (node env by default; content.test.js overrides to jsdom)
 npx jest test/cache.test.js  # Run a single test file
@@ -17,7 +17,7 @@ npm run test:e2e       # Playwright E2E tests (requires: npx playwright install)
 npm run package        # Build + zip for distribution → github-stars-extension.zip
 ```
 
-**Critical:** Always run `npm run build` after modifying `src/background.js` or any `src/lib/` module — the service worker loads from `dist/background.js`, not source.
+**Critical:** Always run `npm run build` after modifying `src/background.js`, `src/content.js`, or any `src/lib/` module — the extension loads both scripts from `dist/`, not source.
 
 Pre-commit hooks (gitleaks, trailing-whitespace, end-of-file-fixer) run on commit — install with `pre-commit install`.
 
@@ -28,10 +28,10 @@ Pre-commit hooks (gitleaks, trailing-whitespace, end-of-file-fixer) run on commi
 - `src/content.js` — Scans DOM for GitHub links, injects badge elements, sends `{ type: 'GET_STARS', owner, repo }` messages to background
 - `src/background.js` — Receives messages, calls GitHub API via `src/lib/ghApi.js`, manages two-tier cache (`chrome.storage.local` + TTL via `src/lib/cache.js`), responds with star data
 - `src/options.js` + `src/options.html` — User config UI (token, cache TTL, inactive threshold, domain exclusions, debug toggle)
-- `src/lib/parseRepo.js` — URL parsing with extensive excluded-path filtering to avoid false positives
+- `src/lib/parseRepo.js` — Canonical URL classification: `extractRepoFromUrl` (lenient parse) and `extractBadgeableRepo` (parse + badge exclusion lists)
 - `src/lib/domain.js` — Domain matching (exact + subdomain)
 
-**Dual module pattern** — All `src/lib/` modules export via `module.exports` for Node.js (tests/build) and are also available as browser globals. The background script uses try-catch `require()` with inline fallbacks for browser context.
+**Module pattern** — `src/lib/` modules are CommonJS (`module.exports`, guarded with `typeof module !== 'undefined'` where the E2E harness inlines them). Both entry points (`background.js`, `content.js`) `require()` them directly; esbuild resolves the requires at build time, and Node resolves them in Jest.
 
 ## Testing
 
@@ -43,8 +43,8 @@ Pre-commit hooks (gitleaks, trailing-whitespace, end-of-file-fixer) run on commi
 
 - Cache keys use `gh:owner/repo` format
 - Badge insertion guarded by `data-gh-stars-badge-inserted` attribute to prevent duplicates
-- **URL filtering has three layers in `src/content.js`**: `EXCLUDED_GITHUB_PATHS` (path-prefix matches like `orgs/`, `settings/`), `EXCLUDED_GITHUB_PATTERNS` (substring matches like `/blob/`, `/issues`), and `HARD_CODED_EXCLUDED_PAGES` (full page-URL matches like `docs.github.com`)
-- **Duplicated excluded-paths gotcha:** `src/lib/parseRepo.js` has its own `EXCLUDED_GITHUB_PATHS` list that overlaps with but is shorter than the one in `src/content.js` — changes to excluded paths must be applied to both files
+- **URL filtering has three layers**: `EXCLUDED_GITHUB_PATHS` (path-prefix matches like `orgs/`, `settings/`) and `EXCLUDED_GITHUB_PATTERNS` (substring matches like `/blob/`, `/issues`) both live canonically in `src/lib/parseRepo.js`; `HARD_CODED_EXCLUDED_PAGES` (full page-URL matches like `docs.github.com`) lives in `src/content.js`
+- `extractRepoFromUrl` intentionally still parses repo sub-pages (`/tree/`, `/issues`) to `{owner, repo}`; `extractBadgeableRepo` is the strict variant the content script uses for badge decisions
 - Wrap all `chrome.*` API calls in try-catch for test environment compatibility
 - Inactive repos detected via `pushed_at` timestamp (not `updated_at`), threshold is user-configurable (default 60 days)
 - Badge states: active (⭐ count), inactive (🧟⭐ count), archived (🪦), not found (🚫)

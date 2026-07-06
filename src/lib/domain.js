@@ -7,4 +7,6 @@ function hostMatchesDisabled(host, disabled) {
   return host === disabled || host.endsWith('.' + disabled);
 }
 
-module.exports = { hostMatchesDisabled };
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { hostMatchesDisabled };
+}

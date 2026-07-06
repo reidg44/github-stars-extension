@@ -1,5 +1,3 @@
-const path = require('path');
-
 // Provide a minimal fake chrome.storage implementation that is easy to reset
 const fakeStorage = {
   local: {

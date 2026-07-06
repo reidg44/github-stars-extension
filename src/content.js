@@ -1,106 +1,10 @@
 // content.js
 // Finds GitHub repo links on the page and inserts a placeholder badge element.
+// Bundled by esbuild into dist/content.js so lib modules resolve at build time.
 
 (function () {
-  // Prefer using the more robust parser if available
-  let extractRepoFromUrl = null;
-  try {
-    // In bundling environments this may be replaced; fallback below
-    // eslint-disable-next-line no-undef
-    if (typeof require === 'function') {
-      extractRepoFromUrl = require('./lib/parseRepo').extractRepoFromUrl;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  const FALLBACK_REGEX = new RegExp(
-    'https?://(?:www\\.)?github.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?:[/#?]|$)',
-    'i'
-  );
-
-  // GitHub paths that are NOT repository links (easy to extend)
-  const EXCLUDED_GITHUB_PATHS = [
-    'about/',
-    'account/',
-    'apps/',
-    'blog/',
-    'codespaces/',
-    'collections/',
-    'community/',
-    'contact/',
-    'copilot/',
-    'developer/',
-    'discussions/',
-    'enterprise/',
-    'enterprises/',
-    'events/',
-    'explore/',
-    'features/',
-    'followers',
-    'git-guides',
-    'github-copilot/',
-    'in-product-messaging/',
-    'join',
-    'login',
-    'logout',
-    'marketplace/',
-    'mcp/',
-    'new/',
-    'notifications/',
-    'oauth/',
-    'organizations/',
-    'orgs/',
-    'pricing/',
-    'readme/',
-    'repos/',
-    'search',
-    'security/',
-    'settings/',
-    'signup',
-    'site/',
-    'sponsors/',
-    'stars/',
-    'support/',
-    'topics/',
-    'trending',
-    'users/',
-    'watching',
-    'customer-terms/'
-  ];
-
-  // GitHub path patterns that can appear anywhere in the path (not just at the start)
-  const EXCLUDED_GITHUB_PATTERNS = [
-    '.github-private',
-    '/actions',
-    '/blame',
-    '/blob/',
-    '/branches',
-    '/commit/',
-    '/commits',
-    '/compare',
-    '/contributors',
-    '/deployments',
-    '/forks',
-    '/graphs',
-    '/history',
-    '/insights',
-    '/issues',
-    '/network',
-    '/projects',
-    '/pull/',
-    '/pulse',
-    '/raw',
-    '/releases',
-    '/resources/',
-    '/security',
-    '/settings',
-    '/stargazers',
-    '/tags',
-    '/tree/',
-    '/watchers',
-    '/wiki'
-  ];
+  const { extractBadgeableRepo } = require('./lib/parseRepo');
+  const { hostMatchesDisabled } = require('./lib/domain');
 
   // Hard-coded webpage URLs where badges should never appear
   // Add specific webpage URLs here where you don't want ANY GitHub badges to show
@@ -122,52 +26,18 @@
     'https://www.google.com/complete/search'
   ];
 
-  function parseUrl(href) {
-    if (extractRepoFromUrl) {
-      const res = extractRepoFromUrl(href);
-      if (res) return res;
-    }
-
-    // Check if this is an excluded GitHub path
-    try {
-      const url = new URL(href);
-      const hostname = url.hostname.toLowerCase();
-      // Only allow github.com and *.github.com
-      if (hostname === 'github.com' || hostname.endsWith('.github.com')) {
-        const path = url.pathname.toLowerCase();
-        // Remove leading slash for comparison
-        const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-
-        // Check if the path starts with any excluded prefix
-        for (const excludedPath of EXCLUDED_GITHUB_PATHS) {
-          if (cleanPath.startsWith(excludedPath.toLowerCase())) {
-            return null; // This is not a repo link
-          }
-        }
-
-        // Check if the path contains any excluded patterns
-        for (const excludedPattern of EXCLUDED_GITHUB_PATTERNS) {
-          if (cleanPath.includes(excludedPattern.toLowerCase())) {
-            return null; // This is not a repo link
-          }
-        }
-      }
-    } catch (e) {
-      // If URL parsing fails, continue with regex fallback
-    }
-
-    const m = href.match(FALLBACK_REGEX);
-    if (!m) return null;
-    return { owner: m[1], repo: m[2] };
-  }
-
   function findRepoLinks() {
-    const anchors = Array.from(document.querySelectorAll('a[href]'));
-    return anchors
-      .map((a) => ({ el: a, parsed: parseUrl(a.href) }))
-      .filter((x) => x.parsed)
-      .map((x) => ({ el: x.el, owner: x.parsed.owner, repo: x.parsed.repo }))
-      .filter((item) => shouldInsertBadge(item.el, item.owner, item.repo));
+    const anchors = document.querySelectorAll(
+      'a[href]:not([data-gh-stars-badge-inserted])'
+    );
+    const found = [];
+    for (const el of anchors) {
+      const parsed = extractBadgeableRepo(el.href);
+      if (parsed && shouldInsertBadge(el, parsed.owner, parsed.repo)) {
+        found.push({ el, owner: parsed.owner, repo: parsed.repo });
+      }
+    }
+    return found;
   }
 
   let badgesEnabled = true;
@@ -175,12 +45,8 @@
 
   function hostIsDisabled() {
     try {
-      const host = window.location.hostname.toLowerCase();
-      return disabledDomains.some(
-        (d) =>
-          (d && host === d.toLowerCase()) ||
-          host.endsWith('.' + d.toLowerCase())
-      );
+      const host = window.location.hostname;
+      return disabledDomains.some((d) => hostMatchesDisabled(host, d));
     } catch (e) {
       return false;
     }
@@ -203,18 +69,12 @@
     }
   }
 
-  // read initial setting
+  // read initial settings
   chrome.storage &&
     chrome.storage.sync &&
-    chrome.storage.sync.get(['badges_enabled'], (items) => {
+    chrome.storage.sync.get(['badges_enabled', 'disabled_domains'], (items) => {
       if (items && items.badges_enabled === false) badgesEnabled = false;
-    });
-
-  // read disabled domains
-  chrome.storage &&
-    chrome.storage.sync &&
-    chrome.storage.sync.get(['disabled_domains'], (items) => {
-      disabledDomains = Array.isArray(items.disabled_domains)
+      disabledDomains = Array.isArray(items && items.disabled_domains)
         ? items.disabled_domains
         : [];
     });
@@ -264,6 +124,15 @@
   }
 
   /**
+   * Convert an sRGB channel value (0-255) to its linear-light value
+   * per the WCAG relative-luminance formula
+   */
+  function channelToLinear(value) {
+    const s = value / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  }
+
+  /**
    * Calculate relative luminance of a color according to WCAG formula
    * @param {number} r - Red value (0-255)
    * @param {number} g - Green value (0-255)
@@ -271,18 +140,25 @@
    * @returns {number} Relative luminance (0-1)
    */
   function getRelativeLuminance(r, g, b) {
-    const rsRGB = r / 255;
-    const gsRGB = g / 255;
-    const bsRGB = b / 255;
+    return (
+      0.2126 * channelToLinear(r) +
+      0.7152 * channelToLinear(g) +
+      0.0722 * channelToLinear(b)
+    );
+  }
 
-    const rLinear =
-      rsRGB <= 0.04045 ? rsRGB / 12.92 : Math.pow((rsRGB + 0.055) / 1.055, 2.4);
-    const gLinear =
-      gsRGB <= 0.04045 ? gsRGB / 12.92 : Math.pow((gsRGB + 0.055) / 1.055, 2.4);
-    const bLinear =
-      bsRGB <= 0.04045 ? bsRGB / 12.92 : Math.pow((bsRGB + 0.055) / 1.055, 2.4);
-
-    return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
+  // Parse a CSS rgb()/rgba() color string into channel values, or null
+  function parseColor(color) {
+    const match = (color || '').match(
+      /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
+    );
+    if (!match) return null;
+    return {
+      r: parseInt(match[1]),
+      g: parseInt(match[2]),
+      b: parseInt(match[3]),
+      a: match[4] ? parseFloat(match[4]) : 1
+    };
   }
 
   /**
@@ -296,30 +172,17 @@
     // Traverse up to 10 levels to find a background color
     for (let i = 0; i < 10 && current; i++) {
       const style = window.getComputedStyle(current);
-      const bgColor = style.backgroundColor;
+      const color = parseColor(style.backgroundColor);
 
-      // Parse rgba/rgb color
-      const match = bgColor.match(
-        /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
-      );
-
-      if (match) {
-        const r = parseInt(match[1]);
-        const g = parseInt(match[2]);
-        const b = parseInt(match[3]);
-        const a = match[4] ? parseFloat(match[4]) : 1;
-
+      if (color) {
         // If alpha is very low, the background is transparent, keep looking
-        if (a < 0.1) {
+        if (color.a < 0.1) {
           current = current.parentElement;
           continue;
         }
 
-        // Calculate relative luminance
-        const luminance = getRelativeLuminance(r, g, b);
-
         // Dark backgrounds have low luminance (< 0.5)
-        return luminance < 0.5;
+        return getRelativeLuminance(color.r, color.g, color.b) < 0.5;
       }
 
       current = current.parentElement;
@@ -329,19 +192,10 @@
     // If all backgrounds are transparent, check if text is light (indicating dark theme)
     if (current) {
       const style = window.getComputedStyle(current);
-      const textColor = style.color;
-      const match = textColor.match(
-        /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/
-      );
-
-      if (match) {
-        const r = parseInt(match[1]);
-        const g = parseInt(match[2]);
-        const b = parseInt(match[3]);
-        const luminance = getRelativeLuminance(r, g, b);
-
+      const color = parseColor(style.color);
+      if (color) {
         // Light text (high luminance) indicates dark background
-        return luminance > 0.5;
+        return getRelativeLuminance(color.r, color.g, color.b) > 0.5;
       }
     }
 
@@ -408,25 +262,20 @@
     return { span, txt, zombiePrefix };
   }
 
-  // Helper: compute inactivity from a 'pushed_at' timestamp (number or string).
-  function computeInactiveFromPushed(pushed) {
+  // Replace the star with a status emoji (not found / archived)
+  function showStatusEmoji(span, txt, emoji, title, cls) {
+    txt.textContent = emoji;
+    span.title = title;
+    span.classList.add(cls);
     try {
-      if (!pushed) return false;
-      const ts = typeof pushed === 'number' ? pushed : Date.parse(pushed);
-      if (Number.isNaN(ts)) return false;
-      const DEFAULT_INACTIVE_THRESHOLD_DAYS = 60;
-      const INACTIVE_THRESHOLD_MS =
-        1000 * 60 * 60 * 24 * DEFAULT_INACTIVE_THRESHOLD_DAYS;
-      return Date.now() - ts > INACTIVE_THRESHOLD_MS;
+      const svg = span.querySelector('svg');
+      if (svg && svg.remove) svg.remove();
     } catch (e) {
-      return false;
+      // ignore DOM errors
     }
   }
 
   function insertBadge(anchor, owner, repo) {
-    if (!badgesEnabled) return;
-    if (hostIsDisabled()) return;
-    if (pageIsHardCodedExcluded()) return;
     if (anchor.dataset.ghStarsBadgeInserted) return;
     anchor.dataset.ghStarsBadgeInserted = '1';
 
@@ -457,117 +306,89 @@
             /not\s*found/i.test(errMsg) ||
             /404/.test(errMsg);
           if (looks404) {
-            // Show only the banned emoji for not-found repos. Remove/hide the svg star.
-            txt.textContent = '🚫';
-            span.title = 'Repository not found';
-            span.classList.add('notfound');
-            try {
-              const svg = span.querySelector('svg');
-              if (svg && svg.remove) svg.remove();
-            } catch (e) {
-              // ignore DOM errors
-            }
+            showStatusEmoji(span, txt, '🚫', 'Repository not found', 'notfound');
           } else {
             txt.textContent = '-';
           }
+        } else if (response.archived) {
+          showStatusEmoji(span, txt, '🪦', 'Repository archived', 'archived');
         } else {
-          // if archived, show gravestone emoji only
-          if (response.archived) {
-            txt.textContent = '🪦';
-            span.title = 'Repository archived';
-            span.classList.add('archived');
-            try {
-              const svg = span.querySelector('svg');
-              if (svg && svg.remove) svg.remove();
-            } catch (e) {
-              // ignore
-            }
+          // show star count; if inactive, prefix with zombie emoji
+          txt.textContent = (response.stars || 0).toLocaleString();
+          if (response.inactive) {
+            zombiePrefix.textContent = '🧟';
+            zombiePrefix.style.display = 'inline';
+            span.title = `Repository marked as inactive (not pushed recently). Pushed: ${
+              response.pushed_at
+                ? new Date(response.pushed_at).toLocaleString()
+                : 'Unknown'
+            }`;
+            span.classList.add('inactive');
           } else {
-            // compute display for stars; if inactive, prefix with zombie emoji
-            const inactiveFlag =
-              typeof response.inactive === 'boolean'
-                ? response.inactive
-                : computeInactiveFromPushed(response.pushed_at);
-
-            const countText = (response.stars || 0).toLocaleString();
-            if (inactiveFlag) {
-              zombiePrefix.textContent = '🧟';
-              zombiePrefix.style.display = 'inline';
-              txt.textContent = countText;
-              span.title = `Repository marked as inactive (not pushed recently). Pushed: ${
-                response.pushed_at
-                  ? new Date(response.pushed_at).toLocaleString()
-                  : 'Unknown'
-              }`;
-              span.classList.add('inactive');
-            } else {
-              zombiePrefix.style.display = 'none';
-              txt.textContent = countText;
-              span.title = `Updated: ${new Date(
-                response.updated
-              ).toLocaleString()}`;
-            }
+            zombiePrefix.style.display = 'none';
+            span.title = `Updated: ${new Date(
+              response.updated
+            ).toLocaleString()}`;
           }
         }
       }
     );
   }
 
+  const ALLOWED_GITHUB_HOSTS = [
+    'github.com',
+    'www.github.com',
+    'gist.github.com'
+  ];
+
+  // On GitHub pages, skip links that are within UI chrome
+  const DENY_SELECTORS = [
+    '.social-count',
+    '.js-social-count',
+    '.pagehead',
+    '.pagehead-actions',
+    'header',
+    'nav',
+    'button',
+    '.btn',
+    '.dropdown',
+    '.commit-meta',
+    '.file-header',
+    '.file',
+    '.reponav',
+    '.octicon',
+    '.avatar',
+    '.discussion-timeline',
+    '.toc',
+    '.repo-list',
+    // GitHub Project Interface Elements
+    'dialog',
+    '[role="dialog"]',
+    '.side-panel',
+    '.sidebar',
+    '.metadata',
+    '.labels-list',
+    '.LabelsList-module__labelsListContainer--bS7BO',
+    '.IssueMetadata-module__metadataValue--d40kf',
+    // GitHub Label/Filter Links
+    '.label',
+    '.labels',
+    '[class*="label"]',
+    '[class*="Label"]',
+    '.tag',
+    '.tags',
+    // GitHub Dashboard Sidebars (Your repositories, etc.)
+    '.dashboard-sidebar'
+  ].join(',');
+
   // Decide whether to insert a badge for this anchor on this page.
   function shouldInsertBadge(anchor, owner, repo) {
     try {
       const host = window.location.hostname.toLowerCase();
-      const ALLOWED_GITHUB_HOSTS = [
-        'github.com',
-        'www.github.com',
-        'gist.github.com'
-      ];
       // If we're not on GitHub itself, allow badges everywhere (subject to disabled domains)
       if (!ALLOWED_GITHUB_HOSTS.includes(host)) return true;
 
-      // On GitHub pages, be conservative: skip links that are within UI chrome
-      const DENY_SELECTORS = [
-        '.social-count',
-        '.js-social-count',
-        '.pagehead',
-        '.pagehead-actions',
-        'header',
-        'nav',
-        'button',
-        '.btn',
-        '.dropdown',
-        '.commit-meta',
-        '.file-header',
-        '.file',
-        '.reponav',
-        '.octicon',
-        '.avatar',
-        '.discussion-timeline',
-        '.toc',
-        '.repo-list',
-        // GitHub Project Interface Elements
-        'dialog',
-        '[role="dialog"]',
-        '.side-panel',
-        '.sidebar',
-        '.metadata',
-        '.labels-list',
-        '.LabelsList-module__labelsListContainer--bS7BO',
-        '.IssueMetadata-module__metadataValue--d40kf',
-        // GitHub Label/Filter Links
-        '.label',
-        '.labels',
-        '[class*="label"]',
-        '[class*="Label"]',
-        '.tag',
-        '.tags',
-        // GitHub Dashboard Sidebars (Your repositories, etc.)
-        '.dashboard-sidebar'
-      ];
-
-      for (const sel of DENY_SELECTORS) {
-        if (anchor.closest(sel)) return false;
-      }
+      if (anchor.closest(DENY_SELECTORS)) return false;
 
       // If the anchor is icon/image-only (no visible text), skip — it's likely UI.
       const text = (anchor.textContent || '').trim();
@@ -612,8 +433,9 @@
   }
 
   function scanAndInsert() {
-    const repos = findRepoLinks();
-    repos.forEach((r) => insertBadge(r.el, r.owner, r.repo));
+    // Page-level checks are constant for the whole scan
+    if (!badgesEnabled || hostIsDisabled() || pageIsHardCodedExcluded()) return;
+    findRepoLinks().forEach((r) => insertBadge(r.el, r.owner, r.repo));
   }
 
   // Run initial scan and attach a MutationObserver after DOM is ready.

@@ -70,45 +70,28 @@ document.addEventListener('DOMContentLoaded', () => {
         'debug_logging'
       ],
       (items) => {
-        if (tokenItems.gh_token) {
-          actualToken = tokenItems.gh_token;
         // If there's a saved token, show it masked initially
-        isTokenMasked = true;
+        actualToken = tokenItems.gh_token || '';
+        isTokenMasked = !!actualToken;
         updateTokenDisplay();
-      } else {
-        actualToken = '';
-        isTokenMasked = false;
-        updateTokenDisplay();
-      }
 
-      // Handle migration from minutes to hours
-      if (items.cache_ttl_hours) {
-        ttlEl.value = items.cache_ttl_hours;
-      } else if (items.cache_ttl_minutes) {
-        // Convert old minutes setting to hours (round up)
-        ttlEl.value = Math.ceil(items.cache_ttl_minutes / 60);
-      } else {
-        ttlEl.value = 24; // default 24 hours
-      }
+        // Handle migration from minutes to hours
+        if (items.cache_ttl_hours) {
+          ttlEl.value = items.cache_ttl_hours;
+        } else if (items.cache_ttl_minutes) {
+          // Convert old minutes setting to hours (round up)
+          ttlEl.value = Math.ceil(items.cache_ttl_minutes / 60);
+        } else {
+          ttlEl.value = 24; // default 24 hours
+        }
 
-      if (items.inactive_threshold_days) {
-        inactiveDaysEl.value = items.inactive_threshold_days;
-      } else {
-        inactiveDaysEl.value = 60; // default 60 days
+        inactiveDaysEl.value = items.inactive_threshold_days || 60;
+        document.getElementById('enabled').checked =
+          items.badges_enabled !== false;
+        document.getElementById('debug-logging').checked =
+          !!items.debug_logging;
       }
-
-      if (items.badges_enabled === false) {
-        document.getElementById('enabled').checked = false;
-      } else {
-        document.getElementById('enabled').checked = true;
-      }
-      if (items.debug_logging) {
-        document.getElementById('debug-logging').checked = true;
-      } else {
-        document.getElementById('debug-logging').checked = false;
-      }
-    }
-  );
+    );
   });
 
   // load disabled domains

@@ -1,61 +1,117 @@
 // parseRepo.js
-// Exports a single function extractRepoFromUrl(url) -> { owner, repo } | null
+// Canonical GitHub URL classification, shared by the content script (bundled)
+// and tests.
+//   extractRepoFromUrl(url)   -> { owner, repo } | null  lenient: any *.github.com
+//                                URL that resolves to an owner/repo, including
+//                                repo sub-pages like /tree/ or /issues
+//   extractBadgeableRepo(url) -> { owner, repo } | null  strict: only links that
+//                                should receive a star badge
 
-// GitHub paths that are NOT repository links (easy to extend)
+// GitHub top-level paths that are NOT repository owners (easy to extend)
 const EXCLUDED_GITHUB_PATHS = [
-  'topics/',
-  'contact/',
-  'orgs/',
-  'settings/',
-  'notifications/',
-  'explore/',
-  'marketplace/',
-  'pricing/',
-  'features/',
-  'enterprise/',
-  'security/',
-  'sponsors/',
   'about/',
+  'account/',
+  'apps/',
   'blog/',
-  'developer/',
-  'support/',
-  'community/',
-  'events/',
+  'codespaces/',
   'collections/',
+  'community/',
+  'contact/',
+  'copilot/',
+  'customer-terms/',
+  'developer/',
   'discussions/',
-  'new/',
-  'organizations/',
+  'enterprise/',
+  'enterprises/',
+  'events/',
+  'explore/',
+  'features/',
+  'followers',
+  'git-guides',
+  'github-copilot/',
+  'in-product-messaging/',
+  'join',
   'login',
   'logout',
-  'signup',
-  'join',
-  'apps/',
+  'marketplace/',
+  'mcp/',
+  'new/',
+  'notifications/',
   'oauth/',
+  'organizations/',
+  'orgs/',
+  'pricing/',
+  'readme/',
+  'repos/',
   'search',
-  'in-product-messaging/',
-  'account/',
+  'security/',
+  'settings/',
+  'signup',
   'site/',
-  'codespaces/'
+  'sponsors/',
+  'stars/',
+  'support/',
+  'topics/',
+  'trending',
+  'users/',
+  'watching'
 ];
+
+// Path patterns that mark a URL as a repo sub-page (or otherwise non-badgeable)
+// rather than a plain repo link; may appear anywhere in the path
+const EXCLUDED_GITHUB_PATTERNS = [
+  '.github-private',
+  '/actions',
+  '/blame',
+  '/blob/',
+  '/branches',
+  '/commit/',
+  '/commits',
+  '/compare',
+  '/contributors',
+  '/deployments',
+  '/forks',
+  '/graphs',
+  '/history',
+  '/insights',
+  '/issues',
+  '/network',
+  '/projects',
+  '/pull/',
+  '/pulse',
+  '/raw',
+  '/releases',
+  '/resources/',
+  '/security',
+  '/settings',
+  '/stargazers',
+  '/tags',
+  '/tree/',
+  '/watchers',
+  '/wiki'
+];
+
+// Owner and repo path segments may only contain these characters
+const VALID_SEGMENT = /^[A-Za-z0-9_.-]+$/;
+
+function cleanPathOf(u) {
+  const path = u.pathname.toLowerCase();
+  return path.startsWith('/') ? path.slice(1) : path;
+}
 
 function extractRepoFromUrl(url) {
   if (!url || typeof url !== 'string') return null;
   try {
     const u = new URL(url, 'https://example.com');
-    // Only care about github.com host (allow subdomains like www)
-    const host = u.hostname.toLowerCase();
     // Accept only github.com and its direct subdomains
+    const host = u.hostname.toLowerCase();
     const hostParts = host.split('.');
     if (hostParts.length < 2 || hostParts.slice(-2).join('.') !== 'github.com') return null;
 
-    // Check if this is an excluded GitHub path
-    const path = u.pathname.toLowerCase();
-    // Remove leading slash for comparison
-    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-
     // Check if the path starts with any excluded prefix
+    const cleanPath = cleanPathOf(u);
     for (const excludedPath of EXCLUDED_GITHUB_PATHS) {
-      if (cleanPath.startsWith(excludedPath.toLowerCase())) {
+      if (cleanPath.startsWith(excludedPath)) {
         return null; // This is not a repo link
       }
     }
@@ -66,13 +122,7 @@ function extractRepoFromUrl(url) {
 
     const owner = parts[0];
     const repo = parts[1];
-
-    // Reject common non-repo paths (e.g., /notifications, /settings)
-    if (!owner || !repo) return null;
-
-    // Repo names may not contain spaces; keep a conservative validation
-    const valid = /^[A-Za-z0-9_.-]+$/;
-    if (!valid.test(owner) || !valid.test(repo)) return null;
+    if (!VALID_SEGMENT.test(owner) || !VALID_SEGMENT.test(repo)) return null;
 
     return { owner, repo };
   } catch (err) {
@@ -80,6 +130,33 @@ function extractRepoFromUrl(url) {
   }
 }
 
+function extractBadgeableRepo(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const u = new URL(url);
+    // Badges only target repo links on github.com proper (gists, docs and other
+    // subdomains are not repos)
+    const host = u.hostname.toLowerCase();
+    if (host !== 'github.com' && host !== 'www.github.com') return null;
+
+    const cleanPath = cleanPathOf(u);
+    for (const pattern of EXCLUDED_GITHUB_PATTERNS) {
+      if (cleanPath.includes(pattern)) {
+        return null; // Repo sub-page, not a repo link
+      }
+    }
+  } catch (err) {
+    return null;
+  }
+  return extractRepoFromUrl(url);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { extractRepoFromUrl };
+  module.exports = {
+    extractRepoFromUrl,
+    extractBadgeableRepo,
+    EXCLUDED_GITHUB_PATHS,
+    EXCLUDED_GITHUB_PATTERNS,
+    VALID_SEGMENT
+  };
 }

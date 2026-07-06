@@ -1,11 +1,9 @@
 // cache.js - small wrapper around a storage-like API for caching with TTL
 
-function nowMs() {
-  return Date.now();
-}
+const KEY_PREFIX = 'gh:';
 
 function makeKey(owner, repo) {
-  return `gh:${owner}/${repo}`;
+  return `${KEY_PREFIX}${owner}/${repo}`;
 }
 
 async function getCached(storage, owner, repo) {
@@ -17,7 +15,7 @@ async function getCached(storage, owner, repo) {
 
 async function setCached(storage, owner, repo, data) {
   const key = makeKey(owner, repo);
-  const payload = { data, ts: nowMs() };
+  const payload = { data, ts: Date.now() };
   return new Promise((resolve) =>
     storage.set({ [key]: payload }, () => resolve())
   );
@@ -25,7 +23,7 @@ async function setCached(storage, owner, repo, data) {
 
 function isFresh(cached, ttlMs) {
   if (!cached) return false;
-  return nowMs() - cached.ts < ttlMs;
+  return Date.now() - cached.ts < ttlMs;
 }
 
-module.exports = { getCached, setCached, isFresh };
+module.exports = { getCached, setCached, isFresh, makeKey, KEY_PREFIX };
