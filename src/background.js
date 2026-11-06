@@ -92,8 +92,8 @@ async function handleGetStars(msg, sendResponse) {
     return;
   }
 
-  let cached = null;
-  let debug = false;
+  let cached;
+  let debug;
   try {
     const [syncItems, tokenItems, cachedEntry] = await Promise.all([
       storageGet(chrome.storage.sync, [

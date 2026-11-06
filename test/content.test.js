@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @jest-environment ./test/jsdom-env.js */
 
 // minimal chrome shim for content script during tests
 global.chrome = {
@@ -14,8 +14,7 @@ beforeEach(() => {
   // reset DOM
   document.body.innerHTML = '';
   // set location to a neutral host by default
-  delete window.location;
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
 });
 
 function loadContentScript() {
@@ -35,7 +34,7 @@ test('shouldInsertBadge is permissive on non-github hosts', () => {
 });
 
 test('skip icon-only links on github', () => {
-  window.location = new URL('https://github.com/owner/repo');
+  setUrl('https://github.com/owner/repo');
   loadContentScript();
   const helper = window.__ghStarsTest.shouldInsertBadge;
   const a = document.createElement('a');
@@ -47,7 +46,7 @@ test('skip icon-only links on github', () => {
 });
 
 test('skip links inside repo header', () => {
-  window.location = new URL('https://github.com/owner/repo');
+  setUrl('https://github.com/owner/repo');
   loadContentScript();
   const helper = window.__ghStarsTest.shouldInsertBadge;
   const header = document.createElement('header');
@@ -60,7 +59,7 @@ test('skip links inside repo header', () => {
 });
 
 test('skip links to same repo', () => {
-  window.location = new URL('https://github.com/owner/repo');
+  setUrl('https://github.com/owner/repo');
   loadContentScript();
   const helper = window.__ghStarsTest.shouldInsertBadge;
   const a = document.createElement('a');
@@ -71,7 +70,7 @@ test('skip links to same repo', () => {
 });
 
 test('allow links with readable text on github outside UI', () => {
-  window.location = new URL('https://github.com/owner/repo');
+  setUrl('https://github.com/owner/repo');
   loadContentScript();
   const helper = window.__ghStarsTest.shouldInsertBadge;
   const a = document.createElement('a');
@@ -82,7 +81,7 @@ test('allow links with readable text on github outside UI', () => {
 });
 
 test('displays notFound indicator when background signals 404', (done) => {
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
   // shim runtime.sendMessage to simulate background response
   global.chrome.runtime.sendMessage = (msg, cb) => {
     // simulate the background telling us the repo was not found
@@ -106,7 +105,7 @@ test('displays notFound indicator when background signals 404', (done) => {
 });
 
 test('displays inactive (zombie) indicator when background signals inactive', (done) => {
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
   // shim runtime.sendMessage to simulate background response
   global.chrome.runtime.sendMessage = (msg, cb) => {
     // simulate the background telling us the repo is inactive
@@ -141,7 +140,7 @@ test('displays inactive (zombie) indicator when background signals inactive', (d
 });
 
 test('displays archived gravestone and removes star svg when background signals archived', (done) => {
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
   global.chrome.runtime.sendMessage = (msg, cb) => {
     // background says repo is archived
     cb({ stars: 9999, updated: Date.now(), archived: true });
@@ -166,7 +165,7 @@ test('displays archived gravestone and removes star svg when background signals 
 });
 
 test('skip links inside dashboard-sidebar', () => {
-  window.location = new URL('https://github.com/');
+  setUrl('https://github.com/');
   loadContentScript();
   const helper = window.__ghStarsTest.shouldInsertBadge;
 
@@ -198,7 +197,7 @@ test('skip links with resources/ in path', () => {
 });
 
 test('dark background detection applies dark-bg class', (done) => {
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
   global.chrome.runtime.sendMessage = (msg, cb) => {
     cb({ stars: 100, updated: Date.now() });
   };
@@ -224,7 +223,7 @@ test('dark background detection applies dark-bg class', (done) => {
 });
 
 test('light background does not apply dark-bg class', (done) => {
-  window.location = new URL('https://example.com/');
+  setUrl('https://example.com/');
   global.chrome.runtime.sendMessage = (msg, cb) => {
     cb({ stars: 100, updated: Date.now() });
   };
