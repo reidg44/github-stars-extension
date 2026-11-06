@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
-const archiver = require('archiver');
+const { ZipArchive } = require('archiver');
 const { execSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
@@ -12,7 +12,7 @@ execSync('npm run build', { stdio: 'inherit', cwd: root });
 
 const outPath = path.join(root, 'github-stars-extension.zip');
 const output = fs.createWriteStream(outPath);
-const archive = archiver('zip', { zlib: { level: 9 } });
+const archive = new ZipArchive({ zlib: { level: 9 } });
 
 output.on('close', () => {
   console.log(`Created ${outPath} (${archive.pointer()} total bytes)`);

@@ -7,17 +7,23 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "build": "esbuild src/background.js src/content.js --bundle --outdir=dist --platform=browser --target=es2020",
-    "lint": "eslint . --ext .js",
+    "lint": "eslint .",
     "package": "node ./scripts/package.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "archiver": "^5.3.1",
-    "esbuild": "^0.25.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.0.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "playwright": "^1.56.1"
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
+    "archiver": "^8.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
+    "playwright": "^1.65.0"
+  },
+  "//": "overrides: force patched glob/minimatch pulled in by jest 30 and archiver 8 (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249). Remove once jest and readdir-glob depend on glob>=14.0.2 / minimatch>=11.0.1 themselves.",
+  "overrides": {
+    "glob@>=9.0.0 <14.0.2": "^14.0.3",
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.5"
   },
   "jest": {
     "testEnvironment": "node",
